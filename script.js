@@ -5,7 +5,7 @@
  *                      3 dedos (touch.n) → levanta el ESCUDO, que bloquea el agua (contrapresión)
  *                      deslizar un dedo hacia abajo (evento agacharse) → se agacha bajo lo que cuelga
  *   POC                posición del dedo (touch.x) → dónde cae el agua · inclinación (ang.g) → carro, si no toca
- *                      toque (touch.down) → balizas y sirena · fuerza del dedo (touch.k) → agua
+ *                      toque (touch.down) → balizas y sirena · SOPLO al micrófono (mic.level) → agua (único gesto del agua)
  *   Agua en la pantalla = fuerza del POC × (1 − escudos arriba de los ciudadanos en carrera / 3 × CONFIG.contrapresion)
  * Se juega SOLO con teléfonos: mínimo 2 (el POC y un ciudadano). Los puestos sin teléfono no corren.
  *
@@ -35,7 +35,6 @@ const CONFIG = {
   pausaCarril: 0.28,          // segundos sin poder cambiar de calle tras un cambio
   pausaSalto: 0.5,            // segundos sin cambiar de calle tras un salto (el tirón mueve el teléfono)
   inclinacionCarro: 35,       // grados de ang.g para llevar el carro al borde
-  umbralAgua: 0.42,           // fuerza mínima del dedo para que salga agua (0–1), si no hay micrófono
   umbralSoplo: 0.12,          // soplo mínimo (0–1) para que salga agua. Más bajo = basta un soplo suave
   contrapresion: 0.9,         // cuánta agua bloquean los tres escudos juntos (0–1). Un escudo bloquea un tercio de eso
   dedosEscudo: 3,             // dedos apoyados (exactamente) para levantar el escudo
@@ -44,6 +43,7 @@ const CONFIG = {
   llenadoPorSacudida: 0.07,   // cada sacudida del teléfono del POC llena esto del estanque (~15 sacudidas = lleno)
   saltarCinematica: 3,        // segundos que hay que mantener apretado para saltar la cinemática
   esperaDerrota: 3,           // segundos que se ve "Protesta disuelta" antes de volver a la sala con nuevo sorteo
+  esperaFinal: 12,            // segundos que se ve "Llegaron a La Moneda" antes de volver a la sala con nuevo sorteo
   esperaSiguiente: 7,         // segundos que se muestran las estrellas antes de pasar al siguiente nivel
   niveles: [
     {
@@ -182,19 +182,10 @@ tacto.on('rtt', () => pintarPuestos());
 const canal = (puesto, nombre) => (jugadores[puesto] ? tacto.get(nombre, jugadores[puesto]) : null);
 // fuerza del agua: el SOPLO al micrófono del POC (canal mic.level). Sin micrófono, la presión del dedo como respaldo
 const POCsopla = () => { const id = jugadores.poc; return !!(id && ultimoMic[id] && performance.now() - ultimoMic[id] < 700); };
+// el agua sale SOLO soplando: sin micrófono no hay agua (ni el dedo ni otro gesto la activan)
 function fuerzaPOC() {
-  const id = jugadores.poc; if (!id) return 0;
-  if (POCsopla()) return performance.now() - ultimoMic[id] > 600 ? 0 : clamp(canal('poc', 'mic.level') || 0);   // sin noticias recientes: no sale agua
-  const m = ultimoTacto[id]; if (!m || !m.n) return 0;
-  if (typeof m.k === 'number') return m.k;
-  const c = (calib[id] ||= { fmin: 9, fmax: -1, dmin: 1e9, dmax: 0 });
-  let k = 0;
-  for (const z of m.p || []) {
-    c.fmin = Math.min(c.fmin, z.f); c.fmax = Math.max(c.fmax, z.f);
-    if (z.d > 0) { c.dmin = Math.min(c.dmin, z.d); c.dmax = Math.max(c.dmax, z.d); }
-    k = Math.max(k, c.fmax - c.fmin > 0.05 ? z.f : clamp((z.d - c.dmin) / Math.max(14, c.dmax - c.dmin)));
-  }
-  return clamp(k + (m.n - 1) * 0.15);
+  const id = jugadores.poc; if (!id || !POCsopla()) return 0;
+  return performance.now() - ultimoMic[id] > 600 ? 0 : clamp(canal('poc', 'mic.level') || 0);   // sin noticias recientes: no sale agua
 }
 // escudo: un ciudadano apoya 3 dedos sobre su vidrio → levanta el escudo (0/1).
 // (La palma entera no sirve: los teléfonos la descartan como toque accidental.)
@@ -483,9 +474,9 @@ function terminarNivel(ganan) {
     $('#placaCaja').innerHTML = `<p class="num">Fin del recorrido</p><h2 class="titulo">Llegaron a La Moneda</h2>${estrellasHTML(n, na)}<div class="nombres">${nombres}</div>
       <p class="sub">${frase} Recorrido completo: <b>${total} de ${max}</b> estrellas · ${CONFIG.niveles.map((v, i) => `${esc(v.nombre)} ${'★'.repeat(estado.estrellas[i] || 0)}${'☆'.repeat(Math.max(0, (estado.estrellasMax[i] ?? na) - (estado.estrellas[i] || 0)))}`).join(' · ')}</p>
       <p class="det">${total === max ? 'Nadie quedó atrás.' : 'Bastó con que una persona llegara, pero la voz es más fuerte cuando llegan todas.'} Las vallas siguen ahí, los carteles también. La calle sigue hablando.</p>
-      <button class="boton accion" id="btnOtraVez">Volver a empezar</button>`;
-    $('#btnOtraVez').onclick = () => { irA('sala'); pintarPuestos(); pintarQR(); };
-    estado.despues = null;
+      <p class="siguiente">Volviendo a la sala · nuevo sorteo de puestos en <span id="cuentaSig">${CONFIG.esperaFinal}</span></p>`;
+    // fin de la partida ganando: igual que al perder, vuelve sola a la sala y sortea de nuevo los puestos
+    estado.despues = 'salaFinal';
   } else if (ganan) {
     $('#placa').className = 'capa';
     const sig = CONFIG.niveles[estado.nivel + 1];
@@ -605,10 +596,11 @@ function actualizar(dt) {
       if (el && el.textContent !== String(quedan)) el.textContent = Math.max(1, quedan);
       if (e.faseT > CONFIG.esperaSiguiente) empezarNivel(e.nivel + 1);
     }
-    if (e.despues === 'sala') {
-      const quedan = Math.max(1, Math.ceil(CONFIG.esperaDerrota - e.faseT)), el = $('#cuentaSig');
+    if (e.despues === 'sala' || e.despues === 'salaFinal') {   // fin de la partida (perder o ganar): sala y sorteo automático
+      const espera = e.despues === 'sala' ? CONFIG.esperaDerrota : CONFIG.esperaFinal;
+      const quedan = Math.max(1, Math.ceil(espera - e.faseT)), el = $('#cuentaSig');
       if (el && el.textContent !== String(quedan)) el.textContent = quedan;
-      if (e.faseT > CONFIG.esperaDerrota) volverASalaYSortear();
+      if (e.faseT > espera) volverASalaYSortear();
     }
   }
 
@@ -636,7 +628,7 @@ function actualizar(dt) {
 
   // ---- POC: agua y estanque ----
   // umbral: soplar tiene uno más bajo que apretar (un soplo normal ya debe sacar agua)
-  const umbral = POCsopla() ? CONFIG.umbralSoplo : CONFIG.umbralAgua;
+  const umbral = CONFIG.umbralSoplo;
   const quiere = e.fuerza > umbral ? Math.min(1, (e.fuerza - umbral) / (1 - umbral) * 1.25) : 0;
   // contrapresión: los escudos de los ciudadanos en carrera bloquean el agua. Uno solo no alcanza; los tres juntos sí
   // escudos arriba (0–1), sobre los ciudadanos que juegan: con 2 jugadores, cada escudo bloquea la mitad
@@ -645,7 +637,7 @@ function actualizar(dt) {
   if (jugando) corredores.forEach(c => { if (c.activo && c.vivo && !jugadores['c' + (c.i + 1)]) { c.vivo = false; pintarFichas(); } });
   // estanque: se gasta al apretar y NO se llena solo. Se llena agitando el teléfono del POC (evento 'agitar').
   // Si se vacía, el carro queda SECO hasta llenarlo entero.
-  const sale = jugando && !e.recargando ? quiere : 0;                           // lo que aprieta el POC (y gasta)
+  const sale = jugando && !e.recargando ? quiere : 0;                           // lo que sopla el POC (y gasta)
   e.agua = sale * (1 - e.contra * CONFIG.contrapresion);                        // lo que llega a la pantalla
   if (jugando) e.estanque = clamp(e.estanque - sale * dt / niv.chorro);
   if (e.agitar) {
