@@ -100,7 +100,7 @@ const Q = new URLSearchParams(location.search);
 // ============================ 2. TELÉFONOS (MQTT) ============================
 const tacto = new Tacto();
 const jugadores = { c1: null, c2: null, c3: null, poc: null };   // id del teléfono en cada puesto
-const ultimoTacto = {}, calib = {}, ultimoMic = {};
+const ultimoTacto = {}, calib = {}, ultimoMic = {}, desfase = {};
 
 function rolDe(d) {
   const r = (d.caps && d.caps.rol) || '';
@@ -160,7 +160,14 @@ tacto.on('estado', s => { $('#conexion').textContent = s === 'conectado' ? '● 
 tacto.on('datos', (d, kind, m) => {
   if (!Object.values(jugadores).includes(d.id)) asignar();
   if (kind === 'touch') ultimoTacto[d.id] = m;
-  if (kind === 'mic') ultimoMic[d.id] = performance.now();
+  if (kind === 'mic') {
+    // soplo atrasado: si el mensaje llega con más de 0,6 s de retraso (cola del broker), no se usa.
+    // El reloj del teléfono no coincide con el de la pantalla: se estima la diferencia con el mensaje más rápido visto.
+    const dif = Date.now() - (m.t || Date.now());
+    desfase[d.id] = desfase[d.id] == null ? dif : Math.min(desfase[d.id] + 2, dif);
+    if (dif - desfase[d.id] > 600) d.ch['mic.level'] = 0;
+    else ultimoMic[d.id] = performance.now();
+  }
   if (kind === 'evento' && m.tipo === 'agitar' && jugadores.poc === d.id) estado.agitar = (estado.agitar || 0) + 1; // el POC agita: entra agua al estanque
   if (kind === 'evento') { d._evento = true; if (m.tipo === 'salto') { const i = ['c1', 'c2', 'c3'].findIndex(k => jugadores[k] === d.id); if (i >= 0) corredores[i].quiereSaltar = true; } }
   if (kind === 'motion' && m.c && !d._evento) { // respaldo para el control original de Tacto: tirón medido aquí
@@ -174,7 +181,7 @@ const canal = (puesto, nombre) => (jugadores[puesto] ? tacto.get(nombre, jugador
 const POCsopla = () => { const id = jugadores.poc; return !!(id && ultimoMic[id] && performance.now() - ultimoMic[id] < 700); };
 function fuerzaPOC() {
   const id = jugadores.poc; if (!id) return 0;
-  if (POCsopla()) return clamp(canal('poc', 'mic.level') || 0);
+  if (POCsopla()) return performance.now() - ultimoMic[id] > 600 ? 0 : clamp(canal('poc', 'mic.level') || 0);   // sin noticias recientes: no sale agua
   const m = ultimoTacto[id]; if (!m || !m.n) return 0;
   if (typeof m.k === 'number') return m.k;
   const c = (calib[id] ||= { fmin: 9, fmax: -1, dmin: 1e9, dmax: 0 });
