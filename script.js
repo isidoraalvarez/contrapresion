@@ -173,7 +173,7 @@ tacto.on('datos', (d, kind, m) => {
   if (kind === 'evento' && m.tipo === 'agitar' && jugadores.poc === d.id) estado.agitar = (estado.agitar || 0) + 1; // el POC agita: entra agua al estanque
   if (kind === 'evento' && m.tipo === 'agacharse') { const i = ['c1', 'c2', 'c3'].findIndex(k => jugadores[k] === d.id); if (i >= 0) corredores[i].agachaHasta = estado.t + CONFIG.duracionAgachado; }
   if (kind === 'evento') { d._evento = true; if (m.tipo === 'salto') { const i = ['c1', 'c2', 'c3'].findIndex(k => jugadores[k] === d.id); if (i >= 0) corredores[i].quiereSaltar = true; } }
-  if (kind === 'motion' && m.c && !d._evento) { // respaldo para el control original de Tacto: tirón medido aquí
+  if (kind === 'motion' && m.c && !d._evento && !(d.caps && PUESTOS.includes(d.caps.rol))) { // solo para el control original de Tacto (el nuestro detecta el tirón en el teléfono)
     const i = ['c1', 'c2', 'c3'].findIndex(k => jugadores[k] === d.id);
     if (i >= 0 && Math.hypot(m.c[0], m.c[1], m.c[2]) - 9.81 > 8) corredores[i].quiereSaltar = true;
   }
@@ -435,7 +435,7 @@ function empezarNivel(n) {
   // solo corren los ciudadanos que tienen teléfono; los puestos libres no aparecen
   corredores.forEach((c, i) => { const activo = !!jugadores['c' + (i + 1)]; Object.assign(c, { activo, vivo: activo, llego: false, salida: activo ? 0 : 1, carril: i, carrilTeclado: null, x: (i - 1) * CONFIG.anchoCarril, y: 0, vy: 0, cub: 0, escudo: 0, agachaHasta: 0, quiereSaltar: false }); });
   estado.enJuego = corredores.filter(c => c.activo).length;
-  ['c1', 'c2', 'c3'].forEach(k => ordenar(k, { estado: 'corriendo' }));
+  PUESTOS.forEach(k => ordenar(k, { estado: 'corriendo' }));   // nuevo nivel: todos los teléfonos sacan el mensaje de resultado
   $('#hudNum').textContent = `Nivel ${n + 1} de ${CONFIG.niveles.length}`;
   $('#hudNivel').textContent = niv.nombre; $('#hudFecha').textContent = niv.fecha;
   $('#hudDesde').textContent = niv.desde; $('#hudHasta').textContent = niv.hasta;
@@ -471,6 +471,7 @@ function terminarNivel(ganan) {
   const premio = ['', 'Una estrella', 'Dos estrellas', 'Tres estrellas'][n];
   const motivo = solo ? 'por llegar a la meta' : llegan === 1 ? 'por sobrevivir una persona' : llegan === na ? `por sobrevivir ${na === 2 ? 'las dos' : 'las tres'} personas` : `por sobrevivir ${numero[llegan]} personas`;
   if (ganan) setTimeout(() => sonarEstrellas(n), 450);
+  avisarResultado(ganan, ultimo, n);
   if (ganan && ultimo) {
     $('#placa').className = 'capa final';
     $('#placaCaja').innerHTML = `<p class="num">Fin del recorrido</p><h2 class="titulo">Llegaron a La Moneda</h2>${estrellasHTML(n, nMax)}<div class="nombres">${nombres}</div>
@@ -498,12 +499,24 @@ function terminarNivel(ganan) {
     estado.despues = 'sala';
   }
 }
+// al terminar un nivel, cada teléfono sabe si su lado ganó o perdió (los ciudadanos y también el POC)
+const FRASES_POC_GANA = ['¿Disfrutas oprimiendo la libertad de expresión de la gente?', 'Veo que disfrutas ejercer tu poder.'];
+function avisarResultado(ganan, ultimo, estrellas) {
+  const poc = ganan
+    ? { gana: false, titulo: 'Perdiste', texto: 'La revolución siempre ganará.' }
+    : { gana: true, titulo: 'Ganaste', texto: FRASES_POC_GANA[Math.floor(Math.random() * FRASES_POC_GANA.length)] };
+  const ciudadanos = ganan
+    ? { gana: true, titulo: ultimo ? '¡Llegaron a La Moneda!' : '¡Llegaron!', texto: `${'★'.repeat(estrellas)} · ${ultimo ? 'Terminaron el recorrido.' : 'El grupo pasa al siguiente nivel.'}` }
+    : { gana: false, titulo: 'Esta vez no llegaron', texto: 'El agua los alcanzó a todos. Vuelven a la sala para un nuevo sorteo.' };
+  ordenar('poc', { resultado: poc });
+  ['c1', 'c2', 'c3'].forEach(k => { if (jugadores[k]) ordenar(k, { resultado: ciudadanos }); });
+}
 const estrellasHTML = (n, max = 3) => `<div class="estrellas" aria-label="${n} de ${max} estrellas">${Array.from({ length: max }, (_, i) => i).map(i => `<span class="${i < n ? 'on' : ''}" style="animation-delay:${0.45 + i * 0.3}s">★</span>`).join('')}</div>`;
 function sonarEstrellas(n) { for (let i = 0; i < n; i++) setTimeout(() => audio.tocar('cacerola', 0.75, 0.95 + i * 0.07), i * 300); } // cada estrella, un golpe de olla
 function reanudar(n) { if (!estado.pausa) return; estado.pausa = false; empezarNivel(n); }
 function volverASalaYSortear() {
   estado.despues = null; estado.pausa = false; estado.estrellas = [];
-  ['c1', 'c2', 'c3'].forEach(k => ordenar(k, { estado: 'corriendo' }));   // los teléfonos dejan la pantalla de "detenido"
+  PUESTOS.forEach(k => ordenar(k, { estado: 'corriendo' }));   // los teléfonos (también el POC) dejan la pantalla de resultado
   irA('sala'); pintarQR(); sortearPuestos();
 }
 function volverASala() { // los teléfonos siguen conectados; se pueden cambiar nombres y puestos antes de salir otra vez
