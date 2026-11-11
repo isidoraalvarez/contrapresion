@@ -15,7 +15,7 @@ const r3 = v => Math.round(v * 1000) / 1000;
 const Q = new URLSearchParams(location.search);
 const ES_CIUDADANO = r => r === 'c1' || r === 'c2' || r === 'c3';
 const NOMBRE_ROL = { c1: 'Ciudadano 1', c2: 'Ciudadano 2', c3: 'Ciudadano 3', poc: 'POC' };
-const VERSION = '11-11 soplo3';   // se ve arriba a la derecha del teléfono: confirma que el teléfono cargó la versión nueva
+const VERSION = '11-11 soplo4';   // se ve arriba a la derecha del teléfono: confirma que el teléfono cargó la versión nueva
 
 // ---------- entrada ----------
 // El puesto no se elige: lo sortea la pantalla y llega por …/cmd {rol}. Se recuerda por sala, para no perderlo al recargar.
@@ -95,8 +95,15 @@ setInterval(() => {
   const n = mic.fd.length, banda = (a, b) => { let x = 0; for (let i = Math.floor(a * n); i < Math.floor(b * n); i++) x += mic.fd[i]; return x / ((b - a) * n * 255); };
   mic.bandas = [banda(0, 0.04), banda(0.04, 0.2), banda(0.2, 0.6)];
   const crudo = clamp((mic.graves - SOPLO_MIN_DB) / SOPLO_DB);
-  mic.soplo += (crudo - mic.soplo) * (crudo > mic.soplo ? 0.6 : 0.2);   // sube rápido, baja suave
-  pub('mic', { t: Date.now(), l: r3(mic.soplo), b: mic.bandas.map(r3) });
+  mic.soplo += (crudo - mic.soplo) * (crudo > mic.soplo ? 0.6 : 0.35);   // sube rápido, baja rápido
+  if (mic.soplo < 0.02) mic.soplo = 0;
+  // se envía SOLO cuando cambia (o un latido cada 0,4 s). Enviar 30 mensajes por segundo llenaba la cola del broker:
+  // el agua llegaba tarde (al dejar de soplar) y seguía saliendo un rato
+  const ahora = performance.now(), cambio = Math.abs(mic.soplo - (mic.enviado ?? -1));
+  if ((cambio > 0.04 && ahora - (mic.tEnvio || 0) > 66) || (mic.soplo === 0 && mic.enviado !== 0) || ahora - (mic.tEnvio || 0) > (mic.soplo > 0 ? 200 : 400)) {
+    mic.enviado = mic.soplo; mic.tEnvio = ahora;
+    pub('mic', { t: Date.now(), l: r3(mic.soplo), b: mic.bandas.map(v => Math.round(v * 100) / 100) });
+  }
 }, 33);
 
 // ---------- MQTT ----------
@@ -159,7 +166,7 @@ const enviarTacto = qos => pub('touch', { t: Date.now(), n: cur.n, ar: cur.ar, k
 function ponerToques(p, r) {
   cur = { n: p.length, p, ar: r3(r.width / r.height), k: fuerza(p) };
   if (cur.n !== lastN) { lastN = cur.n; enviarTacto(1); }
-  else if (!cola) { cola = true; requestAnimationFrame(() => { cola = false; enviarTacto(0); }); }
+  else if (!cola) { cola = true; setTimeout(() => { cola = false; enviarTacto(0); }, 50); }   // al mover el dedo: 20 por segundo como máximo
 }
 const casillas = new Map();
 function casilla(id) { if (casillas.has(id)) return casillas.get(id); const u = new Set(casillas.values()); for (let s = 1; s <= 5; s++) if (!u.has(s)) { casillas.set(id, s); return s; } return null; }
@@ -221,8 +228,13 @@ function ligarMovimiento() {
     }
     sucio = true;
   });
+  // giro: 20 veces por segundo como máximo, y solo si cambió al menos medio grado (o un latido cada 0,5 s)
+  let enviadoAng = null, tAng = 0;
   setInterval(() => { if (!motionOn || !sucio) return; sucio = false;
-    pub('motion', { t: Date.now(), a: ang.map(v => Math.round(v * 10) / 10), r: rot.map(v => Math.round(v * 10) / 10), c: acc.map(v => Math.round(v * 100) / 100) }); }, 33);
+    const ahora = performance.now(), cambio = enviadoAng ? Math.max(...ang.map((v, i) => Math.abs(v - enviadoAng[i]))) : 99;
+    if (cambio < 0.5 && ahora - tAng < 500) return;
+    enviadoAng = [...ang]; tAng = ahora;
+    pub('motion', { t: Date.now(), a: ang.map(v => Math.round(v * 10) / 10), r: rot.map(v => Math.round(v)), c: acc.map(v => Math.round(v * 10) / 10) }); }, 50);
 }
 
 // ---------- dibujo de la superficie ----------
