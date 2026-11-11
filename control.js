@@ -15,7 +15,7 @@ const r3 = v => Math.round(v * 1000) / 1000;
 const Q = new URLSearchParams(location.search);
 const ES_CIUDADANO = r => r === 'c1' || r === 'c2' || r === 'c3';
 const NOMBRE_ROL = { c1: 'Ciudadano 1', c2: 'Ciudadano 2', c3: 'Ciudadano 3', poc: 'POC' };
-const VERSION = '11-11 escudo3';   // se ve arriba a la derecha del teléfono: confirma que el teléfono cargó la versión nueva
+const VERSION = '11-11 soplo5';   // se ve arriba a la derecha del teléfono: confirma que el teléfono cargó la versión nueva
 
 // ---------- entrada ----------
 // El puesto no se elige: lo sortea la pantalla y llega por …/cmd {rol}. Se recuerda por sala, para no perderlo al recargar.
@@ -70,7 +70,7 @@ async function activarMic(alEntrar = false) {
     const motivo = e && e.name === 'NotAllowedError'
       ? `El micrófono está bloqueado para esta página. ${iphone ? 'En iPhone: toca "aA" en la barra de Safari → Ajustes del sitio web → Micrófono → Permitir, y recarga.' : 'En Android: toca el candado junto a la dirección → Permisos → Micrófono → Permitir, y recarga.'}`
       : e && e.name === 'NotFoundError' ? 'Este teléfono no tiene micrófono disponible.' : (e && e.message) || 'No se pudo usar el micrófono.';
-    mic.error = motivo + ' Mientras tanto, el POC suelta el agua apretando fuerte la pantalla.';
+    mic.error = motivo + ' Sin micrófono el POC no puede lanzar agua: el agua sale solo soplando.';
     if (rol === 'poc' || !alEntrar) { $('#aviso').textContent = mic.error; $('#btnMic').hidden = false; }
   }
 }
@@ -282,7 +282,8 @@ function dibujar() {
     $('#rolDato').textContent = `${nombre || NOMBRE_ROL[rol]} · inclinación ${Math.round(ang[2])}° · calle ${['izquierda', 'centro', 'derecha'][carril]}`;
   } else if (rol === 'poc') {
     // con micrófono, la fuerza es el soplo y el umbral es más bajo (mismo valor que CONFIG.umbralSoplo en la pantalla)
-    const k = mic.on ? mic.soplo : cur.k, umbral = mic.on ? 0.12 : 0.42, on = cur.n > 0 || (mic.on && k > umbral);
+    // el agua sale solo soplando (mismo umbral que CONFIG.umbralSoplo en la pantalla); sin micrófono no hay agua
+    const k = mic.on ? mic.soplo : 0, umbral = 0.12, on = cur.n > 0 || (mic.on && k > umbral);
     if (on) { const azul = Math.floor(t * 6) % 2; g.fillStyle = azul ? 'rgba(31,91,255,.30)' : 'rgba(232,32,42,.22)'; g.fillRect(0, 0, W, H); }
     // medidor: la barra sube al soplar; sobre la línea amarilla sale agua
     g.fillStyle = 'rgba(239,233,220,.06)'; g.fillRect(W - 46, 90, 26, H - 120);
@@ -309,9 +310,9 @@ function dibujar() {
       g.fillText(`estanque ${Math.round(estanque * 100)} %`, W / 2, H / 2 + 50);
       $('#rolDato').textContent = `sin agua · ${motionOn ? 'agita' : 'toca rápido'} para llenar el estanque`;
     } else {
-      const verbo = mic.on ? 'sopla' : 'aprieta';
-      $('#rolDato').textContent = on ? (k > umbral ? `AGUA · fuerza ${Math.round(k * 100)} %${resiste}` : `${verbo} más fuerte para el agua (${Math.round(k * 100)} %)`)
-        : mic.on ? `sopla al micrófono · graves +${Math.max(0, Math.round(mic.graves))} dB` : `el dedo apunta · aprieta para el agua (${calidadPresion()})`;
+      $('#rolDato').textContent = !mic.on ? 'SIN MICRÓFONO NO HAY AGUA · toca "Activar micrófono"'
+        : k > umbral ? `AGUA · fuerza ${Math.round(k * 100)} %${resiste}`
+        : `sopla al micrófono · graves +${Math.max(0, Math.round(mic.graves))} dB`;
     }
   }
   requestAnimationFrame(dibujar);
