@@ -15,7 +15,7 @@ const r3 = v => Math.round(v * 1000) / 1000;
 const Q = new URLSearchParams(location.search);
 const ES_CIUDADANO = r => r === 'c1' || r === 'c2' || r === 'c3';
 const NOMBRE_ROL = { c1: 'Ciudadano 1', c2: 'Ciudadano 2', c3: 'Ciudadano 3', poc: 'POC' };
-const VERSION = '11-11 soplo5';   // se ve arriba a la derecha del teléfono: confirma que el teléfono cargó la versión nueva
+const VERSION = '11-11 soplo6';   // se ve arriba a la derecha del teléfono: confirma que el teléfono cargó la versión nueva
 
 // ---------- entrada ----------
 // El puesto no se elige: lo sortea la pantalla y llega por …/cmd {rol}. Se recuerda por sala, para no perderlo al recargar.
@@ -41,13 +41,22 @@ function recibirRol(r) {
 }
 
 // ---------- micrófono (POC): soplar suelta el agua ----------
-// Soplar sobre el micrófono produce un ruido muy fuerte en los GRAVES (bajo 500 Hz): el viento golpea la cápsula.
-// Se mide esa banda en decibeles, sobre el ruido de fondo de la sala (que se aprende solo), así funciona igual en
-// iPhone y Android aunque cada micrófono tenga distinta ganancia.
+// Cómo se distingue un SOPLO de una voz o del ruido de la sala (vale igual para iPhone y Android):
+//  1. Fuerza: el viento golpea la cápsula y dispara la energía de los GRAVES (40–300 Hz) muy por sobre el fondo
+//     de la sala (que se aprende solo). Se exige un soplo FUERTE: SOPLO_MIN_DB sobre el fondo para empezar.
+//  2. Forma: el soplo es ruido (espectro plano, "planitud espectral" alta); la voz y la música son tonos con
+//     armónicos (planitud baja). Se exige planitud > PLANITUD_MIN.
+//  3. Dónde está la energía: en el soplo los graves dominan; en la voz, un "shhh" y el ruido de la sala dominan
+//     los medios (300–3000 Hz). Se exige graves ≥ medios + GRAVES_SOBRE_MEDIOS.
+//  4. Duración: un aplauso, un golpe o un portazo duran un instante; el soplo se sostiene. Se exigen SOPLO_SOSTENIDO
+//     cuadros seguidos (~0,15 s) antes de que salga agua.
 // Se publica en el canal mic de Tacto: {t, l, b:[graves, medios, agudos]}, con l = soplo 0–1.
-const SOPLO_DB = 26;        // dB sobre el fondo que cuentan como "soplar a fondo" (más bajo = más sensible)
-const SOPLO_MIN_DB = 8;    // dB sobre el fondo que se ignoran (ruido de la sala, voces lejanas)
-const mic = { on: false, ac: null, an: null, fdb: null, fd: null, piso: null, graves: 0, soplo: 0, bandas: [0, 0, 0] };
+const SOPLO_MIN_DB = 15;      // dB de graves sobre el fondo para que cuente como soplo (más alto = hay que soplar más fuerte)
+const SOPLO_DB = 20;          // dB adicionales hasta el soplo "a fondo" (más alto = cansa más llegar al máximo)
+const PLANITUD_MIN = 0.45;    // 0–1: qué tan "ruido" tiene que ser (soplo ≈ 0,6–0,8; voz ≈ 0,1–0,3)
+const GRAVES_SOBRE_MEDIOS = 4; // dB: en el soplo los graves dominan; en un "shhh", el ruido de sala o la voz, no
+const SOPLO_SOSTENIDO = 5;    // cuadros seguidos (de 33 ms) que tiene que durar el soplo
+const mic = { on: false, ac: null, an: null, fdb: null, fd: null, piso: null, graves: 0, soplo: 0, bandas: [0, 0, 0], planitud: 0, seguidos: 0, esSoplo: false };
 // se pide al tocar "Entrar" (todos los teléfonos, porque el puesto se sortea y cualquiera puede ser POC),
 // y de nuevo con el botón amarillo si falló. Solo el POC lo analiza; a los ciudadanos no se les escucha.
 async function activarMic(alEntrar = false) {
@@ -58,7 +67,7 @@ async function activarMic(alEntrar = false) {
     const ac = mic.ac || new (window.AudioContext || window.webkitAudioContext)(); mic.ac = ac; ac.resume();
     const st = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } });
     await ac.resume();
-    const an = ac.createAnalyser(); an.fftSize = 1024; an.smoothingTimeConstant = 0.2; an.minDecibels = -100; an.maxDecibels = -10;
+    const an = ac.createAnalyser(); an.fftSize = 2048; an.smoothingTimeConstant = 0.2;   // 2048: más detalle en los graves an.minDecibels = -100; an.maxDecibels = -10;
     ac.createMediaStreamSource(st).connect(an);
     Object.assign(mic, { on: true, an, fdb: new Float32Array(an.frequencyBinCount), fd: new Uint8Array(an.frequencyBinCount), piso: null, n: 0 });
     $('#btnMic').hidden = true; pintarEstadoMic();
@@ -79,10 +88,17 @@ setInterval(() => {
   if (!mic.on || rol !== 'poc') return;
   if (mic.ac && mic.ac.state !== 'running') mic.ac.resume();
   mic.an.getFloatFrequencyData(mic.fdb); mic.an.getByteFrequencyData(mic.fd);
-  // energía de los graves (de ~40 a 500 Hz), promediando potencia y volviendo a dB
-  const hz = mic.ac.sampleRate / mic.an.fftSize, hasta = Math.max(2, Math.round(500 / hz));
-  let pot = 0; for (let i = 1; i <= hasta; i++) pot += Math.pow(10, Math.max(-140, mic.fdb[i]) / 10);
-  const db = 10 * Math.log10(pot / hasta + 1e-14);
+  // potencia por banda (promedio de potencia, de vuelta a dB)
+  const hz = mic.ac.sampleRate / mic.an.fftSize, bin = f => Math.max(1, Math.round(f / hz));
+  const potencia = i => Math.pow(10, Math.max(-140, mic.fdb[i]) / 10);
+  const bandaDb = (f0, f1) => { let p = 0, k = 0; for (let i = bin(f0); i <= bin(f1); i++, k++) p += potencia(i); return 10 * Math.log10(p / Math.max(1, k) + 1e-14); };
+  const db = bandaDb(40, 300), medios = bandaDb(300, 3000);
+  // planitud espectral LOCAL (60–1000 Hz, en ventanas de ~8 bins): media geométrica / media aritmética de la potencia.
+  // Por ventanas, para que la caída natural del viento hacia los agudos no cuente: solo importa si hay "picos"
+  // (armónicos de la voz o la música → planitud baja) o si es ruido parejo (soplo → planitud alta, ~0,5).
+  { let suma = 0, ventanas = 0; const a = bin(60), b = bin(1000), w = 8;
+    for (let i0 = a; i0 + w <= b; i0 += w) { let lg = 0, ar = 0; for (let i = i0; i < i0 + w; i++) { const p = potencia(i) + 1e-14; lg += Math.log(p); ar += p; } suma += Math.exp(lg / w) / (ar / w); ventanas++; }
+    mic.planitud = ventanas ? suma / ventanas : 0; }
   // los primeros cuadros llegan vacíos (silencio digital): no sirven para aprender el fondo
   if (!isFinite(db) || db < -125) return;
   // ruido de fondo: el primer segundo se aprende rápido; después baja rápido y sube muy lento
@@ -94,8 +110,12 @@ setInterval(() => {
   mic.graves = db - mic.piso;
   const n = mic.fd.length, banda = (a, b) => { let x = 0; for (let i = Math.floor(a * n); i < Math.floor(b * n); i++) x += mic.fd[i]; return x / ((b - a) * n * 255); };
   mic.bandas = [banda(0, 0.04), banda(0.04, 0.2), banda(0.2, 0.6)];
-  const crudo = clamp((mic.graves - SOPLO_MIN_DB) / SOPLO_DB);
-  mic.soplo += (crudo - mic.soplo) * (crudo > mic.soplo ? 0.6 : 0.35);   // sube rápido, baja rápido
+  // ¿es un soplo? fuerte + con forma de ruido + con los graves dominando; y sostenido en el tiempo
+  const pareceSoplo = mic.graves > SOPLO_MIN_DB && mic.planitud > PLANITUD_MIN && db >= medios + GRAVES_SOBRE_MEDIOS;
+  mic.seguidos = pareceSoplo ? mic.seguidos + 1 : 0;
+  mic.esSoplo = mic.seguidos >= SOPLO_SOSTENIDO;
+  const crudo = mic.esSoplo ? clamp((mic.graves - SOPLO_MIN_DB) / SOPLO_DB) : 0;
+  mic.soplo += (crudo - mic.soplo) * (crudo > mic.soplo ? 0.5 : 0.4);   // sube y baja rápido
   if (mic.soplo < 0.02) mic.soplo = 0;
   // se envía SOLO cuando cambia (o un latido cada 0,4 s). Enviar 30 mensajes por segundo llenaba la cola del broker:
   // el agua llegaba tarde (al dejar de soplar) y seguía saliendo un rato
@@ -133,7 +153,13 @@ async function conectar() {
       const m = JSON.parse(p.toString());
       if (m.ping != null) pub('pong', { t: m.ping });
       if (m.vib && navigator.vibrate) navigator.vibrate(m.vib);
-      if (m.estado) { detenido = m.estado === 'detenido'; $('#detenido').hidden = !detenido; }
+      if (m.estado) { detenido = m.estado === 'detenido'; $('#detenido').hidden = !detenido; if (m.estado === 'corriendo') $('#resultadoTel').hidden = true; }
+      if (m.resultado) { // fin del nivel: ganaste o perdiste (también para el POC)
+        $('#detenido').hidden = true;
+        $('#resTitulo').textContent = m.resultado.titulo; $('#resTexto').textContent = m.resultado.texto;
+        $('#resultadoTel').className = m.resultado.gana ? 'gana' : 'pierde'; $('#resultadoTel').hidden = false;
+        if (navigator.vibrate) navigator.vibrate(m.resultado.gana ? [80, 60, 80, 60, 200] : [400]);
+      }
       if (m.rol) recibirRol(m.rol);                        // la pantalla sorteó el puesto de este teléfono
       if (typeof m.contra === 'number') contra = m.contra;
       if (typeof m.estanque === 'number') { estanque = m.estanque; seco = !!m.seco; } // POC: agua que le queda
@@ -228,16 +254,37 @@ function saltar(origen) {
   if (navigator.vibrate) navigator.vibrate(40);
   pico = 1;
 }
+// INCLINAR (cambiar de calle) y TIRAR (saltar) se separan así:
+//  · inclinar es ROTAR el teléfono: cambia el giro (gamma) y la dirección de la gravedad, casi sin desplazarlo.
+//  · tirar es DESPLAZARLO hacia arriba: aceleración "lineal" (sin la gravedad) a lo largo del eje vertical, casi sin rotar.
+// Por eso: el salto exige aceleración lineal fuerte, mayormente vertical y con poca rotación (giroscopio).
+// Y mientras hay un tirón (o recién saltó), el ángulo de la calle se congela: el tirón no cambia de calle.
+const TIRON = 7;               // m/s² de aceleración lineal para saltar
+const VERTICAL_MIN = 0.75;     // qué parte del movimiento tiene que ser vertical (0–1)
+const ROTACION_MAX = 250;      // °/s: si el teléfono está girando más rápido que esto, es inclinar, no tirar
+let grav = null, angCalle = [0, 0, 0], ultimoFuerte = 0;
 function ligarMovimiento() {
   if (ligado) return; ligado = true;
-  addEventListener('deviceorientation', e => { ang = [e.alpha || 0, e.beta || 0, e.gamma || 0]; sucio = true; });
+  addEventListener('deviceorientation', e => {
+    ang = [e.alpha || 0, e.beta || 0, e.gamma || 0]; sucio = true;
+    const ahora = performance.now();
+    // ángulo para la calle: se congela durante un tirón y justo después de saltar
+    if (ahora - ultimoFuerte > 350 && ahora - ultimoSalto > 600) angCalle = [...ang];
+  });
   addEventListener('devicemotion', e => {
     const r = e.rotationRate, a = e.accelerationIncludingGravity;
     if (r) rot = [r.beta || 0, r.gamma || 0, r.alpha || 0];
     if (a) {
       acc = [a.x || 0, a.y || 0, a.z || 0];
-      // tirón: la aceleración total se aleja mucho de la gravedad (9,8 m/s²). Solo se usa la magnitud (iOS invierte los signos).
-      if (ES_CIUDADANO(rol) && Math.hypot(...acc) - 9.81 > 7) saltar('tirón');
+      const ahora = performance.now();
+      grav = grav ? grav.map((g, i) => g + (acc[i] - g) * 0.08) : [...acc];               // gravedad: promedio lento
+      const lin = acc.map((v, i) => v - grav[i]), linMag = Math.hypot(...lin);             // movimiento sin la gravedad
+      const gMag = Math.hypot(...grav) || 9.81, vertical = Math.abs(lin.reduce((s, v, i) => s + v * grav[i], 0)) / gMag;
+      const giro = Math.hypot(...rot);                                                     // °/s
+      if (linMag > 4 && giro < 150) ultimoFuerte = ahora;                                   // se está desplazando, no inclinando
+      // tirón = salto: fuerte, vertical, sin girar y sin estar inclinando
+      // (la velocidad de giro viene del giroscopio: un tirón puro casi no rota, aunque el ángulo calculado tiemble)
+      if (ES_CIUDADANO(rol) && linMag > TIRON && vertical / linMag > VERTICAL_MIN && giro < ROTACION_MAX) saltar('tirón');
       if (rol === 'poc' && Math.abs(Math.hypot(...acc) - 9.81) > 6) agitar(); // sacudir el teléfono: el agua entra al estanque
     }
     sucio = true;
@@ -245,10 +292,12 @@ function ligarMovimiento() {
   // giro: 20 veces por segundo como máximo, y solo si cambió al menos medio grado (o un latido cada 0,5 s)
   let enviadoAng = null, tAng = 0;
   setInterval(() => { if (!motionOn || !sucio) return; sucio = false;
-    const ahora = performance.now(), cambio = enviadoAng ? Math.max(...ang.map((v, i) => Math.abs(v - enviadoAng[i]))) : 99;
+    // los ciudadanos envían el ángulo "de calle" (congelado durante los tirones); el POC, el giro tal cual
+    const angEnvio = ES_CIUDADANO(rol) ? angCalle : ang;
+    const ahora = performance.now(), cambio = enviadoAng ? Math.max(...angEnvio.map((v, i) => Math.abs(v - enviadoAng[i]))) : 99;
     if (cambio < 0.5 && ahora - tAng < 500) return;
-    enviadoAng = [...ang]; tAng = ahora;
-    pub('motion', { t: Date.now(), a: ang.map(v => Math.round(v * 10) / 10), r: rot.map(v => Math.round(v)), c: acc.map(v => Math.round(v * 10) / 10) }); }, 50);
+    enviadoAng = [...angEnvio]; tAng = ahora;
+    pub('motion', { t: Date.now(), a: angEnvio.map(v => Math.round(v * 10) / 10), r: rot.map(v => Math.round(v)), c: acc.map(v => Math.round(v * 10) / 10) }); }, 50);
 }
 
 // ---------- dibujo de la superficie ----------
@@ -312,7 +361,7 @@ function dibujar() {
     } else {
       $('#rolDato').textContent = !mic.on ? 'SIN MICRÓFONO NO HAY AGUA · toca "Activar micrófono"'
         : k > umbral ? `AGUA · fuerza ${Math.round(k * 100)} %${resiste}`
-        : `sopla al micrófono · graves +${Math.max(0, Math.round(mic.graves))} dB`;
+        : `sopla FUERTE al micrófono · graves +${Math.max(0, Math.round(mic.graves))} dB${mic.graves > SOPLO_MIN_DB && !mic.esSoplo ? ' · eso no es un soplo' : ''}`;
     }
   }
   requestAnimationFrame(dibujar);
