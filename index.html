@@ -25,7 +25,7 @@
     <div></div>
     <div class="abajo">
       <div class="gente" id="fichas"></div>
-      <div class="ayuda">Sin teléfonos: <b>A D W S</b> rojo · <b>J L I K</b> azul · <b>← → ↑ ↓</b> verde · POC: <b>Espacio</b> mantener, <b>Q E</b> o ratón apuntar, <b>F</b> repetido llena el estanque · <b>M</b> silencio · <b>− +</b> volumen</div>
+      <div class="ayuda"><b>M</b> silencio · <b>− +</b> volumen</div>
     </div>
   </div>
   <div id="sellos" aria-live="assertive"></div>
@@ -44,7 +44,7 @@
     <div class="bloque">
       <h1 id="tInicio" class="marca"><span class="contra">Contra</span><br><span class="presion">presión</span></h1>
       <div class="cinta" aria-hidden="true" style="width:100%"></div>
-      <p>Tres personas corren por la Alameda. Una cuarta, desde un carro lanzaaguas, aprieta. Cuatro teléfonos, una pantalla. Sube el volumen.</p>
+      <p>Personas corren por la Alameda. Otra, desde un carro lanzaaguas, sopla. De 2 a 4 teléfonos, una pantalla. Sube el volumen.</p>
       <button class="boton" id="btnInicio">Comenzar</button>
     </div>
   </section>
@@ -63,7 +63,7 @@
     <div class="hoja">
       <div class="cabeza">
         <h2 id="tSala" class="marca"><span class="contra">Contra</span><span class="presion">presión</span></h2>
-        <p>Todos escanean el mismo código. Nadie elige: el puesto se sortea al entrar, y cada teléfono es un personaje. Los puestos sin teléfono se juegan con el teclado.</p>
+        <p>Todos escanean el mismo código. Nadie elige: el puesto se sortea al entrar, y cada teléfono es un personaje. Se juega con 2 a 4 teléfonos: siempre un POC y de 1 a 3 ciudadanos.</p>
       </div>
       <div class="cinta" aria-hidden="true"></div>
       <div class="entrada">
@@ -76,7 +76,8 @@
       </div>
       <div class="puestos" id="puestos"></div>
       <div class="pie">
-        <button class="boton" id="btnSalir">Salir a la calle</button>
+        <button class="boton" id="btnSalir" disabled>Salir a la calle</button>
+        <div class="faltan" id="faltan" role="status">Faltan teléfonos: se necesitan al menos 2 (el POC y un ciudadano). No se puede jugar de a uno.</div>
         <div class="sala-id">sala <b id="salaId">——</b> <button class="boton sec" id="btnNuevaSala">nueva sala</button> <span id="conexion">conectando…</span></div>
         <div class="aviso" id="avisoQR"></div>
       </div>
