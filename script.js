@@ -384,14 +384,16 @@ function pintarPuestos() {
     const d = tacto.devices[jugadores[k]], on = !!(d && d.online);
     const rtt = d && d.rtt.length ? ' · ' + Math.round([...d.rtt].sort((a, b) => a - b)[d.rtt.length >> 1]) + ' ms' : '';
     const apodo = on && d.name && d.name !== d.id && k !== 'poc' ? ` · ${d.name.slice(0, 14)}` : '';
-    const el = $('#est-' + k); el.textContent = on ? `● le tocó a un teléfono${apodo}${rtt}` : 'libre · no juega'; el.classList.toggle('on', on);
+    // ciudadano conectado: solo su apodo
+    const i = PUESTOS.indexOf(k), nombre = apodo ? d.name.slice(0, 14) : (k !== 'poc' ? corredores[i].nombre : '');
+    const el = $('#est-' + k); el.textContent = on ? (k === 'poc' ? `● le tocó a un teléfono${rtt}` : nombre) : 'libre · no juega'; el.classList.toggle('on', on);
     el.closest('.puesto').classList.toggle('vacio', !on);
   });
   // se juega solo con teléfonos: hacen falta al menos 2 (el POC y un ciudadano). Los puestos libres no corren.
   const listo = puedeSalir(), btn = $('#btnSalir');
   if (btn) { btn.disabled = !listo; btn.title = listo ? '' : 'Faltan teléfonos'; }
   const falta = $('#faltan');
-  if (falta) falta.textContent = listo ? '' : 'Se necesitan al menos 2 teléfonos.';
+  if (falta) falta.textContent = listo ? '' : 'Se necesitan al menos dos jugadores';
 }
 const ciudadanosConTelefono = () => ['c1', 'c2', 'c3'].filter(k => { const d = tacto.devices[jugadores[k]]; return d && d.online; });
 function puedeSalir() { const d = tacto.devices[jugadores.poc]; return !!(d && d.online) && ciudadanosConTelefono().length >= 1; }
