@@ -110,6 +110,9 @@ body.pantalla { overflow: hidden; }
 .pie { display: flex; flex-wrap: wrap; align-items: center; gap: 14px 22px; }
 .pie .sala-id { font-size: 12px; letter-spacing: .14em; text-transform: uppercase; color: var(--cal-mut); display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .pie .sala-id b { font-size: 24px; color: var(--valla); letter-spacing: .12em; }
+#btnSalir:disabled { opacity: .35; cursor: not-allowed; }
+.pie .faltan { flex-basis: 100%; font-size: 13px; color: var(--valla); }
+.puesto.vacio { opacity: .5; }
 .pie .aviso { font-size: 11px; color: var(--cal-mut); max-width: 62ch; }
 .pie .aviso b { color: var(--valla); font-weight: 400; }
 
@@ -233,7 +236,7 @@ body.tel input { min-height: 48px; padding: 10px 12px; background: var(--noche-2
 #detenido b { font-family: var(--stencil); font-weight: 900; font-size: clamp(40px, 14vw, 64px); line-height: .9; text-transform: uppercase; color: var(--cal); background: var(--color); padding: 4px 16px 10px; transform: rotate(-3deg); display: inline-block; }
 #detenido p { color: var(--cal-mut); font-size: 13px; margin: 18px 0 0; }
 #guia { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; padding: 10px; }
-body.poc #guia { grid-template-columns: 1fr 1fr; }
+body.poc #guia, body.c1 #guia, body.c2 #guia, body.c3 #guia { grid-template-columns: 1fr 1fr; }
 #btnMic { margin: 10px 10px 0; min-height: 52px; background: var(--valla); color: var(--noche); font-family: var(--stencil); font-weight: 900; font-size: 24px; text-transform: uppercase; border-radius: 4px; }
 #guia div { background: var(--noche-2); border-radius: 4px; padding: 8px; font-size: 10px; line-height: 1.35; color: var(--cal-mut); }
 #guia b { display: block; color: var(--cal); font-family: var(--stencil); font-size: 20px; font-weight: 800; text-transform: uppercase; line-height: 1; margin-bottom: 3px; }
