@@ -236,6 +236,12 @@ body.tel input { min-height: 48px; padding: 10px 12px; background: var(--noche-2
 #detenido { position: absolute; inset: 0; display: grid; place-items: center; text-align: center; background: rgba(7,8,13,.86); pointer-events: none; padding: 20px; }
 #detenido b { font-family: var(--stencil); font-weight: 900; font-size: clamp(40px, 14vw, 64px); line-height: .9; text-transform: uppercase; color: var(--cal); background: var(--color); padding: 4px 16px 10px; transform: rotate(-3deg); display: inline-block; }
 #detenido p { color: var(--cal-mut); font-size: 13px; margin: 18px 0 0; }
+/* fin del nivel en el teléfono: gana / pierde (ciudadanos y POC) */
+#resultadoTel { position: absolute; inset: 0; display: grid; place-items: center; text-align: center; background: rgba(7,8,13,.9); pointer-events: none; padding: 20px; z-index: 2; }
+#resultadoTel b { font-family: var(--stencil); font-weight: 900; font-size: clamp(30px, 10vw, 46px); line-height: .95; text-transform: uppercase; display: inline-block; padding: 6px 14px 10px; transform: rotate(-2deg); text-wrap: balance; }
+#resultadoTel.gana b { background: var(--valla); color: var(--noche); }
+#resultadoTel.pierde b { background: var(--cal); color: var(--noche); }
+#resultadoTel p { color: var(--cal); font-size: 15px; margin: 18px auto 0; max-width: 30ch; }
 #guia { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; padding: 10px; }
 body.poc #guia, body.c1 #guia, body.c2 #guia, body.c3 #guia { grid-template-columns: 1fr 1fr; }
 #btnMic { margin: 10px 10px 0; min-height: 52px; background: var(--valla); color: var(--noche); font-family: var(--stencil); font-weight: 900; font-size: 24px; text-transform: uppercase; border-radius: 4px; }
