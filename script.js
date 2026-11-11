@@ -34,7 +34,8 @@ const CONFIG = {
   pausaCarril: 0.28,          // segundos sin poder cambiar de calle tras un cambio
   pausaSalto: 0.5,            // segundos sin cambiar de calle tras un salto (el tirón mueve el teléfono)
   inclinacionCarro: 35,       // grados de ang.g para llevar el carro al borde
-  umbralAgua: 0.42,           // fuerza mínima del dedo para que salga agua (0–1)
+  umbralAgua: 0.42,           // fuerza mínima del dedo para que salga agua (0–1), si no hay micrófono
+  umbralSoplo: 0.12,          // soplo mínimo (0–1) para que salga agua. Más bajo = basta un soplo suave
   contrapresion: 0.8,         // cuánta agua frenan las tres palmas juntas (0–1). Una sola palma frena un tercio de eso
   manoPorDedo: 0.25,          // cada dedo apoyado suma esto a la palma (4 dedos = mano completa)
   volumenEstallido: 0.85,     // volumen de sonidos/estallido.mp3, la calle de fondo durante la partida (0–1)
@@ -475,13 +476,13 @@ function terminarNivel(ganan) {
       <h2 class="titulo premio">${premio}</h2>
       <p class="sub">${motivo} · llevan <b>${total} de ${max}</b> estrellas</p>
       <div class="nombres">${nombres}</div>
-      <p class="det">Quienes fueron detenidos vuelven a la calle en el siguiente nivel.</p>
+      <p class="det">Quienes quedaron fuera vuelven a correr en el siguiente nivel.</p>
       <p class="siguiente">Siguiente nivel: <b>${esc(sig.nombre)}</b> en <span id="cuentaSig">${CONFIG.esperaSiguiente}</span></p>`;
     estado.despues = 'siguiente';
   } else {
     $('#placa').className = 'capa disuelta';
-    $('#placaCaja').innerHTML = `<p class="num">${esc(niv.nombre)} · ${Math.floor(estado.metros)} de ${niv.meta} m</p><h2 class="titulo">Protesta disuelta</h2><div class="nombres">${nombres}</div>
-      <p class="det">El POC detuvo a las tres personas antes de llegar a ${esc(niv.hasta)}.</p>
+    $('#placaCaja').innerHTML = `<p class="num">${esc(niv.nombre)} · ${Math.floor(estado.metros)} de ${niv.meta} m</p><h2 class="titulo">Esta vez no llegaron</h2><div class="nombres">${nombres}</div>
+      <p class="det">El agua alcanzó a las tres personas antes de llegar a ${esc(niv.hasta)}. Se vuelve a intentar, juntos.</p>
       <p class="siguiente">Volviendo a la sala · nuevo sorteo de puestos en <span id="cuentaSig">${Math.ceil(CONFIG.esperaDerrota)}</span></p>`;
     // perder: de vuelta a la sala y se sortean otra vez los puestos (la partida empieza de nuevo en el nivel 1)
     estado.despues = 'sala';
@@ -502,12 +503,12 @@ function volverASala() { // los teléfonos siguen conectados; se pueden cambiar 
 }
 function pintarFichas() {
   const cont = $('#fichas'); if (!cont) return;
-  cont.innerHTML = corredores.map(c => `<div class="ficha${c.vivo ? '' : ' fuera'}" style="--color:${c.color}"><b>${esc(c.nombre)}</b><span>${c.llego ? 'llegó' : c.vivo ? (jugadores['c' + (c.i + 1)] ? 'teléfono' : 'teclado') : 'detenido'}</span></div>`).join('')
+  cont.innerHTML = corredores.map(c => `<div class="ficha${c.vivo ? '' : ' fuera'}" style="--color:${c.color}"><b>${esc(c.nombre)}</b><span>${c.llego ? 'llegó' : c.vivo ? (jugadores['c' + (c.i + 1)] ? 'teléfono' : 'teclado') : 'fuera de la ronda'}</span></div>`).join('')
     + `<div class="ficha poc" style="--color:var(--poc)"><b>POC</b><span>${jugadores.poc ? 'teléfono' : 'teclado'}</span></div>`;
 }
 function sello(c) {
   const el = document.createElement('div'); el.className = 'sello'; el.style.setProperty('--color', c.color);
-  el.innerHTML = `¡Detenido!<small>${esc(c.nombre)} · ${Math.floor(estado.metros)} m</small>`;
+  el.innerHTML = `¡Alcanzado!<small>${esc(c.nombre)} vuelve en el siguiente nivel</small>`;
   $('#sellos').appendChild(el); setTimeout(() => el.remove(), 3200);
 }
 
@@ -618,7 +619,9 @@ function actualizar(dt) {
   });
 
   // ---- POC: agua y estanque ----
-  const quiere = e.fuerza > CONFIG.umbralAgua ? (e.fuerza - CONFIG.umbralAgua) / (1 - CONFIG.umbralAgua) : 0;
+  // umbral: soplar tiene uno más bajo que apretar (un soplo normal ya debe sacar agua)
+  const umbral = POCsopla() ? CONFIG.umbralSoplo : CONFIG.umbralAgua;
+  const quiere = e.fuerza > umbral ? Math.min(1, (e.fuerza - umbral) / (1 - umbral) * 1.25) : 0;
   // contrapresión: las palmas de los ciudadanos vivos empujan de vuelta. Una sola casi no alcanza; las tres juntas sí
   e.contra = jugando ? vivos().reduce((s, c) => s + c.palma, 0) / 3 : 0;
   // estanque: se gasta al apretar y NO se llena solo. Se llena agitando el teléfono del POC (evento 'agitar').
@@ -727,7 +730,7 @@ function nuevaFila(niv) {
 function detener(c, o) {
   c.vivo = false; c.salida = 0;
   audio.tocar('detenido', 0.9, rnd(0.95, 1.05), c.x / 2); setTimeout(() => audio.tocar('silbato', 0.55, 0.95), 220);
-  ordenar('c' + (c.i + 1), { vib: [300, 80, 300], estado: 'detenido' });
+  ordenar('c' + (c.i + 1), { vib: [150], estado: 'detenido' });   // vibración corta y suave
   ordenar('poc', { vib: [120] });
   sello(c); pintarFichas();
 }
