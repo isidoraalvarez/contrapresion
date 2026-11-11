@@ -56,6 +56,8 @@ Temas: `tacto/<sala>/<dispositivo>/<tipo>`. La sala es un código aleatorio de 6
 
 - Teléfono publica: `status` (retenido, con *last will*) `{online, name, caps:{rol:'c1'|'c2'|'c3'|'poc', motion, presion}}` · `touch` `{t, n, ar, k, p:[{i,x,y,f,d}]}` · `motion` `{t, a:[α,β,γ], r, c}` · `evento` `{tipo:'salto'}` · `pong`.
 - Pantalla publica en `…/<dispositivo>/cmd`: `{ping}`, `{vib:[ms]}`, `{estado:'detenido'|'corriendo'}`, `{rol:'c1'|'c2'|'c3'|'poc'}` (puesto sorteado), `{contra:0–1}` (al POC: resistencia de las palmas).
+- **Agua = soplo**: el POC activa el micrófono con un botón en su teléfono y publica `mic {t, l, b}` (l = soplo 0–1, calibrado sobre el ruido de fondo). La pantalla usa `mic.level` como fuerza; sin micrófono, cae a la presión del dedo (`touch.k`). Estanque: se llena agitando (`evento {tipo:'agitar'}`).
+- **Perder** (los tres detenidos): "Protesta disuelta" 3 s (`CONFIG.esperaDerrota`) y vuelve a la sala con nuevo sorteo. Con 2+ teléfonos, uno siempre es POC (`asegurarPOC()`).
 - **Los puestos se sortean**: un solo QR (`control.html?sala=…`), el teléfono entra sin rol y la pantalla le asigna uno al azar (`asignar()` / `sortearPuestos()`); el teléfono lo guarda en `cp.rol.<sala>` y lo publica en `caps.rol`.
 - La pantalla se suscribe a `tacto/<sala>/#`. Asigna puestos por `caps.rol`; también acepta el control original de Tacto y el de la v1 (`'ciudadano'`, `'carabinero'`).
 - **Todo debe seguir bajo `tacto/…`**: el broker propio solo autoriza `tacto/#` (ver Seguridad).
