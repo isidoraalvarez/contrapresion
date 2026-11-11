@@ -38,7 +38,7 @@ const CONFIG = {
   umbralSoplo: 0.12,          // soplo mínimo (0–1) para que salga agua. Más bajo = basta un soplo suave
   contrapresion: 0.8,         // cuánta agua frenan las tres palmas juntas (0–1). Una sola palma frena un tercio de eso
   manoPorDedo: 0.25,          // cada dedo apoyado suma esto a la palma (4 dedos = mano completa)
-  volumenEstallido: 0.85,     // volumen de sonidos/estallido.mp3, la calle de fondo durante la partida (0–1)
+  volumenProtesta: 0.85,      // volumen de la multitud protestando (InspectorJ, Freesound), la calle de fondo (0–1)
   llenadoPorSacudida: 0.07,   // cada sacudida del teléfono del POC llena esto del estanque (~15 sacudidas = lleno)
   saltarCinematica: 3,        // segundos que hay que mantener apretado para saltar la cinemática
   esperaDerrota: 3,           // segundos que se ve "Protesta disuelta" antes de volver a la sala con nuevo sorteo
@@ -248,10 +248,18 @@ btnSaltar.addEventListener('pointerdown', e => { btnSaltar.setPointerCapture(e.p
 ['pointerup', 'pointercancel', 'lostpointercapture'].forEach(n => btnSaltar.addEventListener(n, () => { btnSaltar._abajo = false; }));
 
 // ============================ 4. AUDIO ============================
-const SONIDOS = ['paso', 'salto', 'carril', 'sirena', 'chorro', 'impacto_agua', 'motor', 'valla', 'cacerola', 'silbato', 'detenido', 'latido', 'fuego', 'dron', 'estallido'];
-const BUCLES = ['motor', 'sirena', 'chorro', 'latido', 'fuego', 'dron', 'estallido'];
-const ARCHIVO = { estallido: 'estallido.mp3' };            // el resto son .wav
-const rutaSonido = n => `sonidos/${ARCHIVO[n] || n + '.wav'}`;
+const SONIDOS = ['pasos', 'salto', 'carril', 'sirena', 'chorro', 'impacto_agua', 'motor', 'valla', 'cacerola', 'silbato', 'detenido', 'latido', 'fuego', 'dron', 'protesta'];
+const BUCLES = ['motor', 'sirena', 'chorro', 'latido', 'fuego', 'dron', 'protesta', 'pasos'];
+// sonidos de Freesound / BigSoundBank (ver README: autoría y licencia). Se dejan con su nombre original para el crédito.
+const ARCHIVO = {
+  protesta: '485621__inspectorj__protesting-crowd-climate-strike-guildford-01-01.wav',   // la calle: multitud protestando
+  silbato: '78508__joedeshon__referee_whistle_01.wav',
+  cacerola: 'METLImpt_Casserole 1 (ID 2956)_BigSoundBank.com.wav',
+  pasos: 'freesound_community-180904-woodland04-run-steps-skip-jump-clip-47486.mp3',   // carrera (bucle)
+};                                                           // el resto: sonidos/<nombre>.wav
+// los sonidos largos se cortan al usarlos como golpe (segundos): la cacerola trae varios golpes, se usa uno
+const DURACION = { cacerola: 0.75, silbato: 1.1 };
+const rutaSonido = n => `sonidos/${encodeURIComponent(ARCHIVO[n] || n + '.wav')}`;
 const DEL_POC = new Set(['sirena', 'chorro', 'impacto_agua']); // suenan encima de todo; el resto ("el mundo") se apaga bajo el agua
 const audio = {
   ctx: null, buf: {}, bucles: {}, mudo: false, modoElem: false, el: {}, sordera: 0,
@@ -300,14 +308,19 @@ const audio = {
     if (!this.ctx) return;
     if (this.modoElem) {
       if (this.mudo || !this.el[n]) return;
-      const a = this.el[n].cloneNode(); a.preservesPitch = false; a.volume = clamp(vol * 0.9 * this.volumen * (DEL_POC.has(n) ? 1 : 1 - this.sordera * 0.75)); a.playbackRate = clamp(rate, 0.5, 2); a.play().catch(() => {}); return;
+      const a = this.el[n].cloneNode(); a.preservesPitch = false; a.volume = clamp(vol * 0.9 * this.volumen * (DEL_POC.has(n) ? 1 : 1 - this.sordera * 0.75)); a.playbackRate = clamp(rate, 0.5, 2); a.play().catch(() => {});
+      if (DURACION[n]) setTimeout(() => a.pause(), DURACION[n] * 1000 / a.playbackRate);
+      return;
     }
     if (!this.buf[n]) return;
     const s = this.ctx.createBufferSource(), g = this.ctx.createGain(), p = this.ctx.createStereoPanner ? this.ctx.createStereoPanner() : null;
     s.buffer = this.buf[n]; s.playbackRate.value = rate; g.gain.value = vol; s.connect(g);
     const destino = DEL_POC.has(n) ? this.salida : this.mundo;
     if (p) { p.pan.value = clamp(pan, -1, 1); g.connect(p); p.connect(destino); } else g.connect(destino);
-    s.start();
+    const t = this.ctx.currentTime, dur = DURACION[n];
+    if (dur) { // corta el sonido largo con un desvanecimiento breve (sin chasquido)
+      const fin = t + dur / rate; g.gain.setValueAtTime(vol, fin - 0.08); g.gain.linearRampToValueAtTime(0, fin); s.start(t, 0); s.stop(fin + 0.02);
+    } else s.start();
   },
   // el agua ensordece: todo lo que no es del POC (pasos, multitud, fuego) se oye como bajo el agua
   ensordecer(k) { this.sordera = k; if (this.mundo) this.mundo.frequency.setTargetAtTime(lerp(18000, 650, k), this.ctx.currentTime, 0.08); },
@@ -374,7 +387,7 @@ function siguientePlaca() {
   $('#cinePlaca').innerHTML = p.titulo
     ? `<p class="fecha">Plaza Dignidad · Alameda · La Moneda</p><h2 class="marca" style="font-size:clamp(70px,14vw,190px)"><span class="contra">Contra</span><br><span class="presion">presión</span></h2>`
     : `<p class="fecha">${esc(p.fecha)}</p><p class="texto">${esc(p.texto)}</p>${p.nota ? `<p class="nota">${esc(p.nota)}</p>` : ''}`;
-  if (estado.cineI > 0) { audio.tocar('cacerola', 0.45, rnd(0.92, 1.05)); setTimeout(() => audio.tocar('cacerola', 0.35, 1.06), 170); }
+  if (estado.cineI > 0) audio.tocar('cacerola', 0.45, rnd(0.92, 1.05));
 }
 function terminarCine() { saltarCine = 0; irA('sala'); pintarPuestos(); pintarQR(); }
 
@@ -541,7 +554,7 @@ function leerCorredores(dt) {
     } else if (c.carrilTeclado != null) cambiarCarril(c, c.carrilTeclado);
     // palma: cualquier contacto agacha; cuánta mano se apoya decide cuánto empuja el agua
     const p = teclas.has(tk.cubrir) ? 1 : palmaDe(k);
-    if (p > 0 && !c.apoya && estado.fase === 'juego' && c.vivo) audio.tocar('paso', 0.6, 0.5, c.x / 3); // la palma golpea el vidrio
+    if (p > 0 && !c.apoya && estado.fase === 'juego' && c.vivo) audio.tocar('carril', 0.7, 0.6, c.x / 3); // la palma golpea el vidrio
     c.apoya = p > 0;
     c.palma = lerp(c.palma || 0, c.vivo ? p : 0, suave(dt, 12));
     c.cub = lerp(c.cub, p > 0 ? 1 : 0, suave(dt, 10));
@@ -621,8 +634,7 @@ function actualizar(dt) {
     c.x = lerp(c.x, (c.carril - 1) * CONFIG.anchoCarril + desfase, suave(dt, 11 * lento));
     if (c.quiereSaltar) { c.quiereSaltar = false; c.espera = Math.max(c.espera || 0, CONFIG.pausaSalto); if ((jugando || espera) && c.y <= 0.001 && c.cub < 0.5) { c.vy = 5.6; if (jugando) { audio.tocar('salto', 0.7, rnd(0.95, 1.1), c.x / 2); ordenar('c' + (c.i + 1), { vib: 30 }); } } }
     c.y = Math.max(0, c.y + c.vy * dt); c.vy = c.y > 0 ? c.vy - 16 * dt : 0;
-    const antes = c.fasePaso; c.fasePaso += dt * (e.vel / 3.2) * lento;
-    if (jugando && c.y <= 0 && Math.floor(antes * 2) !== Math.floor(c.fasePaso * 2)) audio.tocar('paso', 0.32, rnd(0.9, 1.1) * (0.9 + e.vel / 60), c.x / 3);
+    c.fasePaso += dt * (e.vel / 3.2) * lento;   // los pasos suenan como bucle (audio continuo, más abajo)
   });
 
   // ---- POC: agua y estanque ----
@@ -647,7 +659,7 @@ function actualizar(dt) {
   if (e.recargando && e.estanque >= 1) { e.recargando = false; audio.tocar('silbato', 0.35, 1.25); ordenar('poc', { vib: [30] }); }
   if (jugando) ordenar('poc', { estanque: Math.round(e.estanque * 100) / 100, seco: e.recargando }, 200); // el teléfono del POC muestra su estanque
   const unidos = e.contra > 0.62 && sale > 0.1;   // las tres manos frenan el chorro: suena la olla
-  if (unidos && !e.unidos) { audio.tocar('cacerola', 0.7, 1); setTimeout(() => audio.tocar('cacerola', 0.6, 1.07), 150); }
+  if (unidos && !e.unidos) audio.tocar('cacerola', 0.7, 1);
   e.unidos = unidos;
   if (jugando) ordenar('poc', { contra: Math.round(e.contra * 100) / 100 }, 200);   // el POC siente la resistencia en su pantalla
   if (sale > 0.2) vivos().forEach(c => ordenar('c' + (c.i + 1), { vib: [18] }, 700)); // y el agua llega a la mano de los ciudadanos
@@ -680,7 +692,7 @@ function actualizar(dt) {
       }
     }
     e.obst = e.obst.filter(o => o.z > -2);
-    if (e.metros >= e.hitos) { e.hitos += 100; audio.tocar('cacerola', 0.55, 1); setTimeout(() => audio.tocar('cacerola', 0.45, 1.07), 160); }
+    if (e.metros >= e.hitos) { e.hitos += 100; audio.tocar('cacerola', 0.55, 1); }
     if (!vivos().length) terminarNivel(false);
     else if (e.metros >= niv.meta) { corredores.forEach(c => { c.llego = c.vivo; }); terminarNivel(true); }
   } else if (espera) {
@@ -696,11 +708,13 @@ function actualizar(dt) {
     audio.nivel('chorro', e.agua * 0.95);
     if (audio.filtroChorro) audio.filtroChorro.frequency.setTargetAtTime(400 + e.agua * 8000, audio.ctx.currentTime, 0.05);
     audio.nivel('latido', jugando && nv === 1 ? 0.75 : 0);           // queda una sola persona: se oye su cuerpo
-    // la calle (estallido.mp3) es la voz colectiva: suena desde que empieza la partida, baja con cada detención
+    // pasos de carrera: bucle mientras corren; más gente, más fuerte; más velocidad, más rápido
+    audio.nivel('pasos', jugando ? 0.25 + 0.35 * (nv / 3) : 0, 0.85 + e.vel / 40);
+    // la calle (sonido de protesta) es la voz colectiva: suena desde que empieza la partida, baja con cada detención
     // y sube cuando las palmas empujan el agua. El agua la apaga (filtro del mundo).
     const enPartida = e.fase === 'placa' || e.fase === 'juego' || (e.fase === 'resultado' && !e.pausa);
     const voz = jugando ? 0.4 + 0.6 * (nv / 3) + e.contra * 0.3 : 1;
-    audio.nivel('estallido', enPartida ? clamp(CONFIG.volumenEstallido * voz) : 0);
+    audio.nivel('protesta', enPartida ? clamp(CONFIG.volumenProtesta * voz) : 0);
     audio.nivel('fuego', (enCalle && niv.ambiente === 'fuego') ? 0.35 : 0);
     audio.nivel('dron', e.fase === 'cine' ? 0.5 : (enCalle && niv.ambiente === 'dron') ? 0.55 : 0);
   }
