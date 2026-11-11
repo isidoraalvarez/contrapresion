@@ -39,18 +39,23 @@ function recibirRol(r) {
 }
 
 // ---------- micrófono (POC): soplar suelta el agua ----------
-// Soplar sobre el micrófono produce un ruido fuerte y grave. Se mide el volumen (RMS) sobre el ruido de fondo de la sala,
-// que se aprende solo. Se publica en el canal mic de Tacto: {t, l, b:[graves, medios, agudos]}, con l = soplo 0–1.
-const SOPLO_RANGO = 0.14;   // cuánto volumen sobre el fondo es "soplar a fondo" (más bajo = más sensible)
-const mic = { on: false, an: null, td: null, fd: null, piso: 0.02, soplo: 0, bandas: [0, 0, 0] };
+// Soplar sobre el micrófono produce un ruido muy fuerte en los GRAVES (bajo 500 Hz): el viento golpea la cápsula.
+// Se mide esa banda en decibeles, sobre el ruido de fondo de la sala (que se aprende solo), así funciona igual en
+// iPhone y Android aunque cada micrófono tenga distinta ganancia.
+// Se publica en el canal mic de Tacto: {t, l, b:[graves, medios, agudos]}, con l = soplo 0–1.
+const SOPLO_DB = 26;        // dB sobre el fondo que cuentan como "soplar a fondo" (más bajo = más sensible)
+const SOPLO_MIN_DB = 8;    // dB sobre el fondo que se ignoran (ruido de la sala, voces lejanas)
+const mic = { on: false, ac: null, an: null, fdb: null, fd: null, piso: null, graves: 0, soplo: 0, bandas: [0, 0, 0] };
 async function activarMic() {
   try {
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) throw new Error('Este navegador no deja usar el micrófono aquí (necesita HTTPS).');
+    // el AudioContext se crea DENTRO del toque, antes de esperar el permiso: si no, iPhone lo deja suspendido y mide silencio
+    const ac = mic.ac || new (window.AudioContext || window.webkitAudioContext)(); mic.ac = ac; ac.resume();
     const st = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } });
-    const ac = new (window.AudioContext || window.webkitAudioContext)(); await ac.resume();
-    const an = ac.createAnalyser(); an.fftSize = 1024; an.smoothingTimeConstant = 0.3;
+    await ac.resume();
+    const an = ac.createAnalyser(); an.fftSize = 1024; an.smoothingTimeConstant = 0.2; an.minDecibels = -100; an.maxDecibels = -10;
     ac.createMediaStreamSource(st).connect(an);
-    Object.assign(mic, { on: true, an, td: new Float32Array(an.fftSize), fd: new Uint8Array(an.frequencyBinCount) });
+    Object.assign(mic, { on: true, an, fdb: new Float32Array(an.frequencyBinCount), fd: new Uint8Array(an.frequencyBinCount), piso: null, n: 0 });
     $('#btnMic').hidden = true; $('#aviso').textContent = 'Micrófono listo: sopla para soltar el agua.';
     publicarEstado();
   } catch (e) {
@@ -60,14 +65,25 @@ async function activarMic() {
 }
 setInterval(() => {
   if (!mic.on || rol !== 'poc') return;
-  mic.an.getFloatTimeDomainData(mic.td); mic.an.getByteFrequencyData(mic.fd);
-  let s = 0; for (const v of mic.td) s += v * v; const rms = Math.sqrt(s / mic.td.length);
-  // ruido de fondo: baja rápido, sube muy lento (así un soplo largo no se vuelve "fondo")
-  mic.piso = rms < mic.piso ? rms : mic.piso + (rms - mic.piso) * 0.002;
+  if (mic.ac && mic.ac.state !== 'running') mic.ac.resume();
+  mic.an.getFloatFrequencyData(mic.fdb); mic.an.getByteFrequencyData(mic.fd);
+  // energía de los graves (de ~40 a 500 Hz), promediando potencia y volviendo a dB
+  const hz = mic.ac.sampleRate / mic.an.fftSize, hasta = Math.max(2, Math.round(500 / hz));
+  let pot = 0; for (let i = 1; i <= hasta; i++) pot += Math.pow(10, Math.max(-140, mic.fdb[i]) / 10);
+  const db = 10 * Math.log10(pot / hasta + 1e-14);
+  // los primeros cuadros llegan vacíos (silencio digital): no sirven para aprender el fondo
+  if (!isFinite(db) || db < -125) return;
+  // ruido de fondo: el primer segundo se aprende rápido; después baja rápido y sube muy lento
+  // (así un soplo largo no se vuelve "fondo")
+  mic.n = (mic.n || 0) + 1;
+  if (mic.piso == null || !isFinite(mic.piso)) mic.piso = db;
+  const ritmo = mic.n < 30 ? 0.2 : db < mic.piso ? 0.3 : 0.004;
+  mic.piso += (db - mic.piso) * ritmo;
+  mic.graves = db - mic.piso;
   const n = mic.fd.length, banda = (a, b) => { let x = 0; for (let i = Math.floor(a * n); i < Math.floor(b * n); i++) x += mic.fd[i]; return x / ((b - a) * n * 255); };
   mic.bandas = [banda(0, 0.04), banda(0.04, 0.2), banda(0.2, 0.6)];
-  const crudo = clamp((rms - mic.piso * 1.5 - 0.008) / SOPLO_RANGO);
-  mic.soplo += (crudo - mic.soplo) * (crudo > mic.soplo ? 0.6 : 0.25);   // sube rápido, baja suave
+  const crudo = clamp((mic.graves - SOPLO_MIN_DB) / SOPLO_DB);
+  mic.soplo += (crudo - mic.soplo) * (crudo > mic.soplo ? 0.6 : 0.2);   // sube rápido, baja suave
   pub('mic', { t: Date.now(), l: r3(mic.soplo), b: mic.bandas.map(r3) });
 }, 33);
 
@@ -219,11 +235,14 @@ function dibujar() {
     }
     $('#rolDato').textContent = `${nombre || NOMBRE_ROL[rol]} · inclinación ${Math.round(ang[2])}° · calle ${['izquierda', 'centro', 'derecha'][carril]}`;
   } else if (rol === 'poc') {
-    const k = mic.on ? mic.soplo : cur.k, on = cur.n > 0 || (mic.on && k > 0.15);   // con micrófono, la fuerza es el soplo
+    // con micrófono, la fuerza es el soplo y el umbral es más bajo (mismo valor que CONFIG.umbralSoplo en la pantalla)
+    const k = mic.on ? mic.soplo : cur.k, umbral = mic.on ? 0.12 : 0.42, on = cur.n > 0 || (mic.on && k > umbral);
     if (on) { const azul = Math.floor(t * 6) % 2; g.fillStyle = azul ? 'rgba(31,91,255,.30)' : 'rgba(232,32,42,.22)'; g.fillRect(0, 0, W, H); }
+    // medidor: la barra sube al soplar; sobre la línea amarilla sale agua
     g.fillStyle = 'rgba(239,233,220,.06)'; g.fillRect(W - 46, 90, 26, H - 120);
-    g.fillStyle = k > 0.42 ? '#6f95ff' : '#efe9dc'; g.fillRect(W - 46, 90 + (H - 120) * (1 - k), 26, (H - 120) * k);
-    g.strokeStyle = '#ffd400'; g.beginPath(); g.moveTo(W - 52, 90 + (H - 120) * 0.58); g.lineTo(W - 14, 90 + (H - 120) * 0.58); g.stroke();
+    g.fillStyle = k > umbral ? '#6f95ff' : '#efe9dc'; g.fillRect(W - 46, 90 + (H - 120) * (1 - k), 26, (H - 120) * k);
+    g.strokeStyle = '#ffd400'; g.beginPath(); g.moveTo(W - 52, 90 + (H - 120) * (1 - umbral)); g.lineTo(W - 14, 90 + (H - 120) * (1 - umbral)); g.stroke();
+    if (mic.on) { g.fillStyle = '#a39f95'; g.font = '700 10px "Space Mono", monospace'; g.textAlign = 'center'; g.fillText(k > umbral ? 'AGUA' : 'SOPLA', W - 33, 82); }
     for (const z of cur.p) { g.strokeStyle = '#efe9dc'; g.lineWidth = 2; g.beginPath(); g.arc(z.x * W, z.y * H, 24 + k * 60, 0, 7); g.stroke(); }
     g.lineWidth = 1;
     // contrapresión: las palmas de los ciudadanos empujan desde arriba contra el dedo
@@ -245,7 +264,8 @@ function dibujar() {
       $('#rolDato').textContent = `sin agua · ${motionOn ? 'agita' : 'toca rápido'} para llenar el estanque`;
     } else {
       const verbo = mic.on ? 'sopla' : 'aprieta';
-      $('#rolDato').textContent = on ? (k > 0.42 ? `AGUA · fuerza ${Math.round(k * 100)} %${resiste}` : `${verbo} más fuerte para el agua (${Math.round(k * 100)} %)`) : mic.on ? 'sopla al micrófono · el dedo apunta' : `el dedo apunta · aprieta para el agua (${calidadPresion()})`;
+      $('#rolDato').textContent = on ? (k > umbral ? `AGUA · fuerza ${Math.round(k * 100)} %${resiste}` : `${verbo} más fuerte para el agua (${Math.round(k * 100)} %)`)
+        : mic.on ? `sopla al micrófono · graves +${Math.max(0, Math.round(mic.graves))} dB` : `el dedo apunta · aprieta para el agua (${calidadPresion()})`;
     }
   }
   requestAnimationFrame(dibujar);
