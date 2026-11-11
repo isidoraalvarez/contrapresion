@@ -15,7 +15,7 @@ const r3 = v => Math.round(v * 1000) / 1000;
 const Q = new URLSearchParams(location.search);
 const ES_CIUDADANO = r => r === 'c1' || r === 'c2' || r === 'c3';
 const NOMBRE_ROL = { c1: 'Ciudadano 1', c2: 'Ciudadano 2', c3: 'Ciudadano 3', poc: 'POC' };
-const VERSION = '11-11 soplo4';   // se ve arriba a la derecha del teléfono: confirma que el teléfono cargó la versión nueva
+const VERSION = '11-11 escudo3';   // se ve arriba a la derecha del teléfono: confirma que el teléfono cargó la versión nueva
 
 // ---------- entrada ----------
 // El puesto no se elige: lo sortea la pantalla y llega por …/cmd {rol}. Se recuerda por sala, para no perderlo al recargar.
@@ -23,7 +23,7 @@ let rol = '';
 $('#sala').value = Tacto.clean(Q.get('sala')) || Tacto.clean(ls('tacto.sala')) || '';
 $('#nombre').value = ls('cp.nombre') || '';
 const GUIA = {
-  ciudadano: [['Inclina', 'el teléfono a un lado: cambias de calle'], ['Tira', 'el teléfono hacia arriba: saltas (o doble toque)'], ['Empuja', 'con la palma abierta: te cubres y frenas el agua. Solo los tres juntos la detienen']],
+  ciudadano: [['Inclina', 'el teléfono a un lado: cambias de calle'], ['Tira', 'el teléfono hacia arriba: saltas (o doble toque)'], ['Desliza', 'un dedo de arriba hacia abajo: te agachas bajo lo que cuelga'], ['Escudo', 'apoya 3 dedos: bloqueas el agua. Los tres escudos juntos la detienen']],
   poc: [['Sopla', 'al micrófono: sale el agua. Más fuerte, más agua'], ['Apunta', 'con el dedo: el agua cae donde tocas'], ['Toca', 'para encender balizas y sirena'], ['Agita', 'el teléfono: llena el estanque. Vacío, no sale agua']],
 };
 function recibirRol(r) {
@@ -136,7 +136,7 @@ async function conectar() {
       if (m.estado) { detenido = m.estado === 'detenido'; $('#detenido').hidden = !detenido; }
       if (m.rol) recibirRol(m.rol);                        // la pantalla sorteó el puesto de este teléfono
       if (typeof m.contra === 'number') contra = m.contra;
-      if (typeof m.estanque === 'number') { estanque = m.estanque; seco = !!m.seco; } // POC: agua que le queda // POC: cuánto empujan de vuelta las palmas de los ciudadanos
+      if (typeof m.estanque === 'number') { estanque = m.estanque; seco = !!m.seco; } // POC: agua que le queda
     } catch {}
   });
 }
@@ -170,7 +170,12 @@ function ponerToques(p, r) {
 }
 const casillas = new Map();
 function casilla(id) { if (casillas.has(id)) return casillas.get(id); const u = new Set(casillas.values()); for (let s = 1; s <= 5; s++) if (!u.has(s)) { casillas.set(id, s); return s; } return null; }
-let ultimoToque = 0;
+let ultimoToque = 0, desliz = null, baja = 0;
+function agacharse() {
+  pub('evento', { t: Date.now(), tipo: 'agacharse' }, 1);
+  if (navigator.vibrate) navigator.vibrate(25);
+  baja = 1;
+}
 function enToque(e) {
   e.preventDefault();
   const r = sup.getBoundingClientRect(), list = Array.from(e.targetTouches), ids = new Set(list.map(t => t.identifier));
@@ -178,6 +183,15 @@ function enToque(e) {
   if (e.type === 'touchstart' && rol === 'poc' && seco && !motionOn) agitar(); // sin sensores (sin HTTPS): tocar rápido bombea agua
   if (e.type === 'touchstart' && ES_CIUDADANO(rol) && e.touches.length === 1) { // doble toque: salto de respaldo
     const ahora = performance.now(); if (ahora - ultimoToque < 280) saltar('doble toque'); ultimoToque = ahora;
+  }
+  // agacharse: deslizar UN dedo de arriba hacia abajo (rápido y vertical)
+  if (ES_CIUDADANO(rol)) {
+    const t0 = e.touches[0];
+    if (e.type === 'touchstart' && e.touches.length === 1) desliz = { y: (t0.clientY - r.top) / r.height, x: (t0.clientX - r.left) / r.width, t: performance.now(), hecho: false };
+    else if (e.type === 'touchmove' && desliz && !desliz.hecho && e.touches.length === 1) {
+      const dy = (t0.clientY - r.top) / r.height - desliz.y, dx = Math.abs((t0.clientX - r.left) / r.width - desliz.x);
+      if (dy > 0.18 && dy > dx * 1.3 && performance.now() - desliz.t < 700) { desliz.hecho = true; agacharse(); }
+    } else if (e.touches.length !== 1) desliz = null;
   }
   const p = [];
   for (const t of list) {
@@ -248,14 +262,22 @@ function dibujar() {
     for (let i = 0; i < 3; i++) { g.globalAlpha = i === carril ? 0.25 : 0.05; g.fillStyle = i === carril ? col : '#efe9dc'; g.fillRect(i * W / 3 + 3, H * 0.45, W / 3 - 6, H * 0.55); }
     g.globalAlpha = 1; g.strokeStyle = 'rgba(239,233,220,.35)'; g.setLineDash([10, 12]);
     for (let i = 1; i < 3; i++) { g.beginPath(); g.moveTo(i * W / 3, H * 0.45); g.lineTo(i * W / 3, H); g.stroke(); } g.setLineDash([]);
-    const bx = W / 2 + gam * (W / 2 - 30); g.fillStyle = col; g.beginPath(); g.arc(bx, H * 0.36, 16 + pico * 14, 0, 7); g.fill(); pico *= 0.9;
+    const bx = W / 2 + gam * (W / 2 - 30); g.fillStyle = col; g.beginPath(); g.ellipse(bx, H * 0.36 + baja * 30, 16 + pico * 14, (16 + pico * 14) * (1 - baja * 0.5), 0, 0, 7); g.fill(); pico *= 0.9;
+    if (baja > 0.05) { g.globalAlpha = baja; g.fillStyle = '#efe9dc'; g.font = '900 28px "Big Shoulders Stencil Display", Impact, sans-serif'; g.textAlign = 'center'; g.fillText('↓ AGACHADO', W / 2, H * 0.22); g.globalAlpha = 1; }
+    baja *= 0.95;
     for (const z of cur.p) { g.fillStyle = 'rgba(239,233,220,.12)'; g.beginPath(); g.arc(z.x * W, z.y * H, 40 + z.d, 0, 7); g.fill(); }
-    if (cur.n) { // la palma: misma cuenta que la pantalla (más dedos y más superficie, más empuje)
-      const palma = clamp(Math.max(cur.k, cur.n * 0.25));
-      g.fillStyle = col; g.globalAlpha = 0.85; g.fillRect(16, H - 46, (W - 32) * palma, 8); g.globalAlpha = 1;
-      g.strokeStyle = 'rgba(239,233,220,.35)'; g.strokeRect(16, H - 46, W - 32, 8);
+    // escudo: con exactamente 3 dedos (mismo valor que CONFIG.dedosEscudo en la pantalla) se levanta y se ve aquí
+    const DEDOS_ESCUDO = 3, arriba = cur.n === DEDOS_ESCUDO;
+    if (arriba) {
+      const w = W * 0.5, h = H * 0.36, x0 = W / 2 - w / 2, y0 = H * 0.5;
+      g.fillStyle = '#23252f'; g.strokeStyle = col; g.lineWidth = 6;
+      g.beginPath(); g.roundRect ? g.roundRect(x0, y0, w, h, 14) : g.rect(x0, y0, w, h); g.fill(); g.stroke(); g.lineWidth = 1;
+      g.fillStyle = col; g.fillRect(x0 + w * 0.12, y0 + h * 0.44, w * 0.76, h * 0.12);
+      g.beginPath(); g.arc(W / 2, y0 + h * 0.24, Math.min(w, h) * 0.12, 0, 7); g.fill();
+    }
+    if (cur.n) {
       g.fillStyle = '#efe9dc'; g.font = '700 13px "Space Mono", monospace'; g.textAlign = 'center';
-      g.fillText(palma >= 0.99 ? 'MANO COMPLETA · EMPUJAS EL AGUA' : 'TE CUBRES · APOYA TODA LA MANO', W / 2, H - 18);
+      g.fillText(arriba ? 'ESCUDO ARRIBA · BLOQUEAS EL AGUA' : cur.n > DEDOS_ESCUDO ? `SOLO ${DEDOS_ESCUDO} DEDOS PARA EL ESCUDO (${cur.n})` : `APOYA ${DEDOS_ESCUDO} DEDOS PARA EL ESCUDO (${cur.n})`, W / 2, H - 18);
     }
     $('#rolDato').textContent = `${nombre || NOMBRE_ROL[rol]} · inclinación ${Math.round(ang[2])}° · calle ${['izquierda', 'centro', 'derecha'][carril]}`;
   } else if (rol === 'poc') {
@@ -269,12 +291,12 @@ function dibujar() {
     if (mic.on) { g.fillStyle = '#a39f95'; g.font = '700 10px "Space Mono", monospace'; g.textAlign = 'center'; g.fillText(k > umbral ? 'AGUA' : 'SOPLA', W - 33, 82); }
     for (const z of cur.p) { g.strokeStyle = '#efe9dc'; g.lineWidth = 2; g.beginPath(); g.arc(z.x * W, z.y * H, 24 + k * 60, 0, 7); g.stroke(); }
     g.lineWidth = 1;
-    // contrapresión: las palmas de los ciudadanos empujan desde arriba contra el dedo
+    // contrapresión: los escudos de los ciudadanos empujan desde arriba contra el agua
     if (contra > 0.02) { g.fillStyle = `rgba(239,233,220,${0.08 + contra * 0.25})`; g.fillRect(0, 0, W, H * 0.5 * contra); }
     const apunta = on && cur.p.length ? cur.p[0].x * 2 - 1 : gam;
     g.fillStyle = '#2f4a32'; const vx = W / 2 + apunta * (W / 2 - 60); g.fillRect(vx - 28, H - 70, 56, 40);
     g.fillStyle = Math.floor(t * 6) % 2 ? '#1f5bff' : '#e8202a'; g.fillRect(vx - 14, H - 80, 28, 10);
-    const resiste = contra > 0.1 ? ` · resisten ${Math.round(contra * 100)} %` : '';
+    const resiste = contra > 0.1 ? ` · ${Math.round(contra * 3)} escudo${Math.round(contra * 3) === 1 ? '' : 's'} arriba` : '';
     // estanque: barra horizontal abajo; al agitar se sacude
     const sx = (Math.random() - 0.5) * sacudida * 10; sacudida *= 0.85;
     g.strokeStyle = 'rgba(239,233,220,.35)'; g.strokeRect(16 + sx, H - 22, W - 80, 10);
