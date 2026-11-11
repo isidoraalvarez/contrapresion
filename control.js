@@ -23,7 +23,7 @@ $('#sala').value = Tacto.clean(Q.get('sala')) || Tacto.clean(ls('tacto.sala')) |
 $('#nombre').value = ls('cp.nombre') || '';
 const GUIA = {
   ciudadano: [['Inclina', 'el teléfono a un lado: cambias de calle'], ['Tira', 'el teléfono hacia arriba: saltas (o doble toque)'], ['Empuja', 'con la palma abierta: te cubres y frenas el agua. Solo los tres juntos la detienen']],
-  poc: [['Apunta', 'con el dedo: el agua cae donde tocas'], ['Toca', 'para encender balizas y sirena'], ['Aprieta', 'fuerte: suelta el agua'], ['Agita', 'el teléfono: llena el estanque. Vacío, no sale agua']],
+  poc: [['Sopla', 'al micrófono: sale el agua. Más fuerte, más agua'], ['Apunta', 'con el dedo: el agua cae donde tocas'], ['Toca', 'para encender balizas y sirena'], ['Agita', 'el teléfono: llena el estanque. Vacío, no sale agua']],
 };
 function recibirRol(r) {
   if (!NOMBRE_ROL[r]) return;
@@ -34,14 +34,48 @@ function recibirRol(r) {
   $('#guia').innerHTML = GUIA[rol === 'poc' ? 'poc' : 'ciudadano'].map(([a, b]) => `<div><b>${a}</b>${b}</div>`).join('');
   $('#aviso').textContent = nuevo ? `Te tocó: ${NOMBRE_ROL[rol]}${rol === 'poc' ? ' (carro lanzaaguas)' : ''}.` : $('#aviso').textContent;
   if (nuevo && navigator.vibrate) navigator.vibrate([60, 60, 60]);
+  $('#btnMic').hidden = rol !== 'poc' || mic.on;   // el POC necesita el micrófono: se activa con un toque (lo exige el navegador)
   publicarEstado();
 }
+
+// ---------- micrófono (POC): soplar suelta el agua ----------
+// Soplar sobre el micrófono produce un ruido fuerte y grave. Se mide el volumen (RMS) sobre el ruido de fondo de la sala,
+// que se aprende solo. Se publica en el canal mic de Tacto: {t, l, b:[graves, medios, agudos]}, con l = soplo 0–1.
+const SOPLO_RANGO = 0.14;   // cuánto volumen sobre el fondo es "soplar a fondo" (más bajo = más sensible)
+const mic = { on: false, an: null, td: null, fd: null, piso: 0.02, soplo: 0, bandas: [0, 0, 0] };
+async function activarMic() {
+  try {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) throw new Error('Este navegador no deja usar el micrófono aquí (necesita HTTPS).');
+    const st = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } });
+    const ac = new (window.AudioContext || window.webkitAudioContext)(); await ac.resume();
+    const an = ac.createAnalyser(); an.fftSize = 1024; an.smoothingTimeConstant = 0.3;
+    ac.createMediaStreamSource(st).connect(an);
+    Object.assign(mic, { on: true, an, td: new Float32Array(an.fftSize), fd: new Uint8Array(an.frequencyBinCount) });
+    $('#btnMic').hidden = true; $('#aviso').textContent = 'Micrófono listo: sopla para soltar el agua.';
+    publicarEstado();
+  } catch (e) {
+    const motivo = e && e.name === 'NotAllowedError' ? 'No se dio permiso al micrófono.' : e && e.name === 'NotFoundError' ? 'Este teléfono no tiene micrófono disponible.' : (e && e.message) || 'No se pudo usar el micrófono.';
+    $('#aviso').textContent = motivo + ' Sin micrófono, aprieta fuerte la pantalla para el agua.';
+  }
+}
+setInterval(() => {
+  if (!mic.on || rol !== 'poc') return;
+  mic.an.getFloatTimeDomainData(mic.td); mic.an.getByteFrequencyData(mic.fd);
+  let s = 0; for (const v of mic.td) s += v * v; const rms = Math.sqrt(s / mic.td.length);
+  // ruido de fondo: baja rápido, sube muy lento (así un soplo largo no se vuelve "fondo")
+  mic.piso = rms < mic.piso ? rms : mic.piso + (rms - mic.piso) * 0.002;
+  const n = mic.fd.length, banda = (a, b) => { let x = 0; for (let i = Math.floor(a * n); i < Math.floor(b * n); i++) x += mic.fd[i]; return x / ((b - a) * n * 255); };
+  mic.bandas = [banda(0, 0.04), banda(0.04, 0.2), banda(0.2, 0.6)];
+  const crudo = clamp((rms - mic.piso * 1.5 - 0.008) / SOPLO_RANGO);
+  mic.soplo += (crudo - mic.soplo) * (crudo > mic.soplo ? 0.6 : 0.25);   // sube rápido, baja suave
+  pub('mic', { t: Date.now(), l: r3(mic.soplo), b: mic.bandas.map(r3) });
+}, 33);
 
 // ---------- MQTT ----------
 let client = null, base = '', sala = '', nombre = '';
 const dev = ls('tacto.dev') || (ls('tacto.dev', Tacto.rand(6)), ls('tacto.dev')) || Tacto.rand(6);
 const pub = (kind, obj, qos = 0, retain = false) => client && client.connected && client.publish(`${base}/${kind}`, JSON.stringify(obj), { qos, retain });
-const publicarEstado = () => pub('status', { online: true, name: nombre, caps: { rol, motion: motionOn, presion: calidadPresion() } }, 1, true);
+const publicarEstado = () => pub('status', { online: true, name: nombre, caps: { rol, motion: motionOn, presion: calidadPresion(), mic: mic.on } }, 1, true);
 let detenido = false, contra = 0, estanque = 1, seco = false, ultimaSacudida = 0, sacudida = 0;
 // POC: agitar el teléfono llena el estanque. Cada sacudida es un evento {tipo:'agitar'}
 function agitar() {
@@ -170,7 +204,7 @@ function dibujar() {
   g.clearRect(0, 0, W, H);
   const gam = clamp(ang[2] / 40, -1, 1), col = color();
   if (ES_CIUDADANO(rol)) {
-    const carril = gam < -0.35 ? 0 : gam > 0.35 ? 2 : 1;
+    const carril = ang[2] < -18 ? 0 : ang[2] > 18 ? 2 : 1;   // mismo umbral que la pantalla (CONFIG.inclinacionCarril)
     for (let i = 0; i < 3; i++) { g.globalAlpha = i === carril ? 0.25 : 0.05; g.fillStyle = i === carril ? col : '#efe9dc'; g.fillRect(i * W / 3 + 3, H * 0.45, W / 3 - 6, H * 0.55); }
     g.globalAlpha = 1; g.strokeStyle = 'rgba(239,233,220,.35)'; g.setLineDash([10, 12]);
     for (let i = 1; i < 3; i++) { g.beginPath(); g.moveTo(i * W / 3, H * 0.45); g.lineTo(i * W / 3, H); g.stroke(); } g.setLineDash([]);
@@ -185,7 +219,7 @@ function dibujar() {
     }
     $('#rolDato').textContent = `${nombre || NOMBRE_ROL[rol]} · inclinación ${Math.round(ang[2])}° · calle ${['izquierda', 'centro', 'derecha'][carril]}`;
   } else if (rol === 'poc') {
-    const k = cur.k, on = cur.n > 0;
+    const k = mic.on ? mic.soplo : cur.k, on = cur.n > 0 || (mic.on && k > 0.15);   // con micrófono, la fuerza es el soplo
     if (on) { const azul = Math.floor(t * 6) % 2; g.fillStyle = azul ? 'rgba(31,91,255,.30)' : 'rgba(232,32,42,.22)'; g.fillRect(0, 0, W, H); }
     g.fillStyle = 'rgba(239,233,220,.06)'; g.fillRect(W - 46, 90, 26, H - 120);
     g.fillStyle = k > 0.42 ? '#6f95ff' : '#efe9dc'; g.fillRect(W - 46, 90 + (H - 120) * (1 - k), 26, (H - 120) * k);
@@ -209,13 +243,17 @@ function dibujar() {
       g.fillText(motionOn ? '¡AGITA EL TELÉFONO!' : 'TOCA RÁPIDO PARA BOMBEAR', W / 2, H / 2 + 28);
       g.fillText(`estanque ${Math.round(estanque * 100)} %`, W / 2, H / 2 + 50);
       $('#rolDato').textContent = `sin agua · ${motionOn ? 'agita' : 'toca rápido'} para llenar el estanque`;
-    } else $('#rolDato').textContent = on ? (k > 0.42 ? `AGUA · fuerza ${Math.round(k * 100)} %${resiste}` : `balizas · aprieta más para el agua (${Math.round(k * 100)} %)`) : `el dedo apunta · fuerza por ${calidadPresion()}`;
+    } else {
+      const verbo = mic.on ? 'sopla' : 'aprieta';
+      $('#rolDato').textContent = on ? (k > 0.42 ? `AGUA · fuerza ${Math.round(k * 100)} %${resiste}` : `${verbo} más fuerte para el agua (${Math.round(k * 100)} %)`) : mic.on ? 'sopla al micrófono · el dedo apunta' : `el dedo apunta · aprieta para el agua (${calidadPresion()})`;
+    }
   }
   requestAnimationFrame(dibujar);
 }
 
 // ---------- entrar ----------
 async function despertar() { try { await navigator.wakeLock?.request('screen'); } catch {} }
+$('#btnMic').onclick = () => activarMic();
 $('#ir').onclick = async () => {
   sala = Tacto.clean($('#sala').value);
   if (sala.length < 4) { $('#err').textContent = 'Escribe la sala que muestra la pantalla (mínimo 4 caracteres).'; return; }
