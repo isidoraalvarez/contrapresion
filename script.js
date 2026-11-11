@@ -158,7 +158,7 @@ function sortearPuestos() {
   avisarPuestos(true); pintarPuestos(); pintarFichas();
 }
 tacto.on('dispositivo', asignar);
-tacto.on('estado', s => { $('#conexion').textContent = s === 'conectado' ? '● MQTT conectado' : s; });
+tacto.on('estado', s => { const el = $('#conexion'); el.textContent = s === 'conectado' ? '● MQTT conectado' : s; el.classList.toggle('on', s === 'conectado'); });
 tacto.on('datos', (d, kind, m) => {
   if (!Object.values(jugadores).includes(d.id)) asignar();
   if (kind === 'touch') ultimoTacto[d.id] = m;
@@ -391,8 +391,7 @@ function pintarPuestos() {
   const listo = puedeSalir(), btn = $('#btnSalir');
   if (btn) { btn.disabled = !listo; btn.title = listo ? '' : 'Faltan teléfonos'; }
   const falta = $('#faltan');
-  if (falta) falta.textContent = listo ? `Juegan ${ciudadanosConTelefono().length} ciudadano${ciudadanosConTelefono().length === 1 ? '' : 's'} y el POC. Los puestos libres no corren.`
-    : 'Faltan teléfonos: se necesitan al menos 2 (el POC y un ciudadano). No se puede jugar de a uno.';
+  if (falta) falta.textContent = listo ? '' : 'Se necesitan al menos 2 teléfonos.';
 }
 const ciudadanosConTelefono = () => ['c1', 'c2', 'c3'].filter(k => { const d = tacto.devices[jugadores[k]]; return d && d.online; });
 function puedeSalir() { const d = tacto.devices[jugadores.poc]; return !!(d && d.online) && ciudadanosConTelefono().length >= 1; }
@@ -400,17 +399,18 @@ const qrLib = () => window.qrcode ? Promise.resolve() : new Promise((ok, no) => 
 async function servidorLocal() { try { const i = await (await fetch('info', { cache: 'no-store' })).json(); return i && i.baseUrl; } catch { return null; } }
 async function pintarQR() {
   $('#salaId').textContent = tacto.sala;
-  if (window.CP_VISTA_PREVIA) { $('#avisoQR').innerHTML = '<b>Vista previa:</b> aquí no se conectan teléfonos. Juega con el teclado; el QR funciona en la versión publicada.'; $('#qrUnico').textContent = 'QR en la versión publicada'; return; }
+  if (window.CP_VISTA_PREVIA) { $('#qrUnico').textContent = 'QR en la versión publicada'; return; }
   const local = await servidorLocal();
   let base = null;
   if (CONFIG.urlPublica) base = new URL('control.html', CONFIG.urlPublica.replace(/\/?$/, '/'));
   else if (local) base = new URL('control.html', local + '/');
   else if (location.protocol.startsWith('http')) base = new URL('control.html', location.href);
   const aviso = $('#avisoQR');
-  if (!base) { aviso.innerHTML = '<b>Sin códigos QR:</b> la página está abierta como archivo. Para conectar teléfonos, publícala en GitHub Pages o escribe su dirección en <code>CONFIG.urlPublica</code> (script.js). Con teclado se juega igual.'; return; }
+  // sin texto bajo el QR: solo se avisa si algo impide conectar los teléfonos
+  if (!base) { aviso.innerHTML = '<b>Sin códigos QR:</b> la página está abierta como archivo. Ábrela desde GitHub Pages.'; return; }
   aviso.innerHTML = base.protocol === 'http:' && !/localhost|127\./.test(base.host)
-    ? '<b>Ojo:</b> los teléfonos abrirán una página sin HTTPS y no podrán leer la inclinación. Usa GitHub Pages o <code>CONFIG.urlPublica</code>.'
-    : `Los teléfonos entran a <code>${esc(base.href)}</code>`;
+    ? '<b>Ojo:</b> los teléfonos abrirán una página sin HTTPS y no podrán usar el micrófono ni la inclinación. Usa GitHub Pages.'
+    : '';
   // un solo código para todos: lleva la sala, no el puesto (el puesto lo sortea la pantalla)
   const u = new URL(base); u.search = ''; u.searchParams.set('sala', tacto.sala);
   if (Q.get('broker')) u.searchParams.set('broker', Q.get('broker'));
@@ -460,19 +460,21 @@ function terminarNivel(ganan) {
   const nombres = enJuego.map(c => `<span class="c${c.i + 1}${c.llego ? '' : ' fuera'}" style="--color:${c.color}">${esc(c.nombre)}</span>`).join('');
   irA('resultado');
   // estrellas: una por cada persona que llega a la meta, sobre las que jugaban. La nota es del grupo, no de quien llegó
-  const n = enJuego.filter(c => c.llego).length;
-  if (ganan) { estado.estrellas[estado.nivel] = n; estado.estrellasMax[estado.nivel] = na; }
+  const llegan = enJuego.filter(c => c.llego).length;
+  // con 2 jugadores (el POC y un solo ciudadano), llegar a la meta vale siempre las 3 estrellas
+  const solo = enJuego.length === 1, n = solo && llegan ? 3 : llegan, nMax = solo ? 3 : na;
+  if (ganan) { estado.estrellas[estado.nivel] = n; estado.estrellasMax[estado.nivel] = nMax; }
   const total = estado.estrellas.reduce((s, x) => s + (x || 0), 0);
-  const max = CONFIG.niveles.reduce((s, _, i) => s + (estado.estrellasMax[i] ?? na), 0);
+  const max = CONFIG.niveles.reduce((s, _, i) => s + (estado.estrellasMax[i] ?? nMax), 0);
   const numero = ['', 'una', 'dos', 'tres'];
-  const frase = n === na ? (na === 1 ? 'Llegó.' : `Llegaron ${na === 2 ? 'las dos' : 'las tres'} personas juntas.`) : `Llegaron ${numero[n]} de ${numero[na]}.`;
+  const frase = solo ? 'Llegó a la meta.' : llegan === na ? `Llegaron ${na === 2 ? 'las dos' : 'las tres'} personas juntas.` : `Llegaron ${numero[llegan]} de ${numero[na]}.`;
   const premio = ['', 'Una estrella', 'Dos estrellas', 'Tres estrellas'][n];
-  const motivo = n === 1 ? 'por sobrevivir una persona' : n === na ? `por sobrevivir ${na === 2 ? 'las dos' : 'las tres'} personas` : `por sobrevivir ${numero[n]} personas`;
+  const motivo = solo ? 'por llegar a la meta' : llegan === 1 ? 'por sobrevivir una persona' : llegan === na ? `por sobrevivir ${na === 2 ? 'las dos' : 'las tres'} personas` : `por sobrevivir ${numero[llegan]} personas`;
   if (ganan) setTimeout(() => sonarEstrellas(n), 450);
   if (ganan && ultimo) {
     $('#placa').className = 'capa final';
-    $('#placaCaja').innerHTML = `<p class="num">Fin del recorrido</p><h2 class="titulo">Llegaron a La Moneda</h2>${estrellasHTML(n, na)}<div class="nombres">${nombres}</div>
-      <p class="sub">${frase} Recorrido completo: <b>${total} de ${max}</b> estrellas · ${CONFIG.niveles.map((v, i) => `${esc(v.nombre)} ${'★'.repeat(estado.estrellas[i] || 0)}${'☆'.repeat(Math.max(0, (estado.estrellasMax[i] ?? na) - (estado.estrellas[i] || 0)))}`).join(' · ')}</p>
+    $('#placaCaja').innerHTML = `<p class="num">Fin del recorrido</p><h2 class="titulo">Llegaron a La Moneda</h2>${estrellasHTML(n, nMax)}<div class="nombres">${nombres}</div>
+      <p class="sub">${frase} Recorrido completo: <b>${total} de ${max}</b> estrellas · ${CONFIG.niveles.map((v, i) => `${esc(v.nombre)} ${'★'.repeat(estado.estrellas[i] || 0)}${'☆'.repeat(Math.max(0, (estado.estrellasMax[i] ?? nMax) - (estado.estrellas[i] || 0)))}`).join(' · ')}</p>
       <p class="det">${total === max ? 'Nadie quedó atrás.' : 'Bastó con que una persona llegara, pero la voz es más fuerte cuando llegan todas.'} Las vallas siguen ahí, los carteles también. La calle sigue hablando.</p>
       <p class="siguiente">Volviendo a la sala · nuevo sorteo de puestos en <span id="cuentaSig">${CONFIG.esperaFinal}</span></p>`;
     // fin de la partida ganando: igual que al perder, vuelve sola a la sala y sortea de nuevo los puestos
@@ -480,7 +482,7 @@ function terminarNivel(ganan) {
   } else if (ganan) {
     $('#placa').className = 'capa';
     const sig = CONFIG.niveles[estado.nivel + 1];
-    $('#placaCaja').innerHTML = `<p class="num">Nivel ${estado.nivel + 1} superado · Llegaron a ${esc(niv.hasta)}</p>${estrellasHTML(n, na)}
+    $('#placaCaja').innerHTML = `<p class="num">Nivel ${estado.nivel + 1} superado · Llegaron a ${esc(niv.hasta)}</p>${estrellasHTML(n, nMax)}
       <h2 class="titulo premio">${premio}</h2>
       <p class="sub">${motivo} · llevan <b>${total} de ${max}</b> estrellas</p>
       <div class="nombres">${nombres}</div>
