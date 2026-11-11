@@ -112,7 +112,25 @@ body.pantalla { overflow: hidden; }
 .pie .sala-id b { font-size: 24px; color: var(--valla); letter-spacing: .12em; }
 #conexion.on { color: #7dffa8; }   /* MQTT conectado: verde, igual que los puestos con teléfono */
 #btnSalir:disabled { opacity: .35; cursor: not-allowed; }
-.pie .faltan { flex-basis: 100%; font-size: 13px; color: var(--valla); }
+.pie .faltan { font-size: 13px; color: var(--valla); }
+/* todo en UNA línea a la derecha de "Salir a la calle": sala, nueva sala, MQTT y el aviso de jugadores */
+#sala .pie { flex-wrap: nowrap; }
+#sala .pie .sala-id { flex-wrap: nowrap; white-space: nowrap; }
+#sala .pie .faltan { min-width: 0; }
+#sala .pie .aviso:empty { display: none; }
+
+/* la sala cabe entera en una pantalla, sin barra de desplazamiento: los tamaños se ajustan también al alto (vh) */
+#sala { overflow: hidden; scrollbar-width: none; padding-top: max(12px, 2.5vh); padding-bottom: max(12px, 2.5vh); }
+#sala::-webkit-scrollbar { display: none; }
+#sala .hoja { gap: clamp(8px, 1.8vh, 22px); }
+#sala .hoja .cabeza .marca { font-size: clamp(34px, min(7vw, 8vh), 96px); }
+#sala .entrada { padding: clamp(8px, 1.5vh, 16px) 16px; gap: clamp(12px, 2vw, 22px); }
+#sala .entrada .qr { width: clamp(100px, 20vh, 190px); }
+#sala .entrada-txt b { font-size: clamp(22px, 4vh, 40px); }
+#sala .puesto { padding: clamp(8px, 1.3vh, 14px); gap: clamp(4px, 0.8vh, 10px); }
+#sala .puesto h3 { font-size: clamp(18px, 3.2vh, 30px); }
+#sala .boton { font-size: clamp(20px, 3.6vh, 32px); padding-top: clamp(6px, 1vh, 10px); padding-bottom: clamp(6px, 1vh, 10px); }
+#sala .boton.sec { font-size: clamp(16px, 2.6vh, 22px); }
 .puesto.vacio { opacity: .5; }
 .pie .aviso { font-size: 11px; color: var(--cal-mut); max-width: 62ch; }
 .pie .aviso b { color: var(--valla); font-weight: 400; }
