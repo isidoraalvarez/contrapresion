@@ -28,8 +28,11 @@ const CONFIG = {
   // Ej: 'https://usuario.github.io/contrapresion/'. Si queda vacía, los QR usan la dirección de esta página.
   urlPublica: '',
   anchoCarril: 1.25,          // metros
-  inclinacionCarril: 14,      // grados de ang.g para cambiar de calle
-  histeresis: 4,
+  inclinacionCarril: 18,      // grados de ang.g para cambiar de calle (más alto = hay que inclinar más)
+  histeresis: 6,              // margen para volver al centro (evita que tiemble entre dos calles)
+  suavizadoGiro: 7,           // qué tan rápido sigue al giro (más bajo = más calmado, más lento)
+  pausaCarril: 0.28,          // segundos sin poder cambiar de calle tras un cambio
+  pausaSalto: 0.5,            // segundos sin cambiar de calle tras un salto (el tirón mueve el teléfono)
   inclinacionCarro: 35,       // grados de ang.g para llevar el carro al borde
   umbralAgua: 0.42,           // fuerza mínima del dedo para que salga agua (0–1)
   contrapresion: 0.8,         // cuánta agua frenan las tres palmas juntas (0–1). Una sola palma frena un tercio de eso
@@ -37,6 +40,7 @@ const CONFIG = {
   volumenEstallido: 0.85,     // volumen de sonidos/estallido.mp3, la calle de fondo durante la partida (0–1)
   llenadoPorSacudida: 0.07,   // cada sacudida del teléfono del POC llena esto del estanque (~15 sacudidas = lleno)
   saltarCinematica: 3,        // segundos que hay que mantener apretado para saltar la cinemática
+  esperaDerrota: 3,           // segundos que se ve "Protesta disuelta" antes de volver a la sala con nuevo sorteo
   esperaSiguiente: 7,         // segundos que se muestran las estrellas antes de pasar al siguiente nivel
   niveles: [
     {
@@ -95,7 +99,7 @@ const Q = new URLSearchParams(location.search);
 // ============================ 2. TELÉFONOS (MQTT) ============================
 const tacto = new Tacto();
 const jugadores = { c1: null, c2: null, c3: null, poc: null };   // id del teléfono en cada puesto
-const ultimoTacto = {}, calib = {};
+const ultimoTacto = {}, calib = {}, ultimoMic = {};
 
 function rolDe(d) {
   const r = (d.caps && d.caps.rol) || '';
@@ -119,6 +123,7 @@ function asignar() {
   }
   // los puestos se sortean: nadie elige si es ciudadano o POC
   for (const d of libres) { const vacios = PUESTOS.filter(k => !jugadores[k]); if (vacios.length) jugadores[vacios[Math.floor(Math.random() * vacios.length)]] = d.id; }
+  asegurarPOC();
   avisarPuestos();
   // el nombre que escribió la persona en su teléfono pasa a la pantalla
   ['c1', 'c2', 'c3'].forEach((k, i) => { const d = tacto.devices[jugadores[k]]; if (d && d.name && d.name !== d.id) corredores[i].nombre = d.name.slice(0, 14); });
@@ -128,11 +133,21 @@ function asignar() {
 function avisarPuestos(forzar = false) {
   for (const k of PUESTOS) { const d = tacto.devices[jugadores[k]]; if (d && (forzar || (d.caps && d.caps.rol) !== k)) ordenar(k, { rol: k }, forzar ? 0 : 1000); }
 }
-// sortear de nuevo los teléfonos conectados entre los cuatro puestos
+// con dos teléfonos o más, uno SIEMPRE es el POC: si nadie tiene el carro, se le pasa a un ciudadano al azar.
+// Solo fuera de la carrera (en la sala), para no cambiarle el puesto a nadie mientras corre.
+function asegurarPOC() {
+  if (jugadores.poc || ['placa', 'juego', 'resultado'].includes(estado.fase)) return;
+  const ciud = ['c1', 'c2', 'c3'].filter(k => jugadores[k]);
+  if (ciud.length < 2) return;
+  const k = ciud[Math.floor(Math.random() * ciud.length)], i = +k[1] - 1;
+  jugadores.poc = jugadores[k]; jugadores[k] = null; corredores[i].nombre = `Ciudadano ${i + 1}`;
+}
+// sortear de nuevo los teléfonos conectados entre los cuatro puestos (con 2 o más, uno es el POC)
 function sortearPuestos() {
   const ids = PUESTOS.map(k => jugadores[k]).filter(Boolean);
   for (let i = ids.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [ids[i], ids[j]] = [ids[j], ids[i]]; }
-  const orden = [...PUESTOS].sort(() => Math.random() - 0.5);
+  const ciudadanos = ['c1', 'c2', 'c3'].sort(() => Math.random() - 0.5);
+  const orden = ids.length >= 2 ? ['poc', ...ciudadanos] : [...PUESTOS].sort(() => Math.random() - 0.5);
   PUESTOS.forEach(k => { jugadores[k] = null; });
   ids.forEach((id, i) => { jugadores[orden[i]] = id; });
   corredores.forEach((c, i) => { c.nombre = `Ciudadano ${i + 1}`; });
@@ -144,6 +159,7 @@ tacto.on('estado', s => { $('#conexion').textContent = s === 'conectado' ? '● 
 tacto.on('datos', (d, kind, m) => {
   if (!Object.values(jugadores).includes(d.id)) asignar();
   if (kind === 'touch') ultimoTacto[d.id] = m;
+  if (kind === 'mic') ultimoMic[d.id] = performance.now();
   if (kind === 'evento' && m.tipo === 'agitar' && jugadores.poc === d.id) estado.agitar = (estado.agitar || 0) + 1; // el POC agita: entra agua al estanque
   if (kind === 'evento') { d._evento = true; if (m.tipo === 'salto') { const i = ['c1', 'c2', 'c3'].findIndex(k => jugadores[k] === d.id); if (i >= 0) corredores[i].quiereSaltar = true; } }
   if (kind === 'motion' && m.c && !d._evento) { // respaldo para el control original de Tacto: tirón medido aquí
@@ -153,8 +169,11 @@ tacto.on('datos', (d, kind, m) => {
 });
 tacto.on('rtt', () => pintarPuestos());
 const canal = (puesto, nombre) => (jugadores[puesto] ? tacto.get(nombre, jugadores[puesto]) : null);
+// fuerza del agua: el SOPLO al micrófono del POC (canal mic.level). Sin micrófono, la presión del dedo como respaldo
+const POCsopla = () => { const id = jugadores.poc; return !!(id && ultimoMic[id] && performance.now() - ultimoMic[id] < 700); };
 function fuerzaPOC() {
   const id = jugadores.poc; if (!id) return 0;
+  if (POCsopla()) return clamp(canal('poc', 'mic.level') || 0);
   const m = ultimoTacto[id]; if (!m || !m.n) return 0;
   if (typeof m.k === 'number') return m.k;
   const c = (calib[id] ||= { fmin: 9, fmax: -1, dmin: 1e9, dmax: 0 });
@@ -462,22 +481,20 @@ function terminarNivel(ganan) {
   } else {
     $('#placa').className = 'capa disuelta';
     $('#placaCaja').innerHTML = `<p class="num">${esc(niv.nombre)} · ${Math.floor(estado.metros)} de ${niv.meta} m</p><h2 class="titulo">Protesta disuelta</h2><div class="nombres">${nombres}</div>
-      <p class="det">El POC detuvo a las tres personas antes de llegar a ${esc(niv.hasta)}. El juego queda en pausa.</p>
-      <div class="acciones">
-        <button class="boton accion" id="btnReiniciar">Reiniciar partida</button>
-        <button class="boton sec accion" id="btnVolverSala">Volver a la sala</button>
-      </div>
-      <p class="det"><kbd>R</kbd> reiniciar desde el nivel 1 · <kbd>Esc</kbd> volver a la sala</p>`;
-    // única pausa del juego: después de perder. Durante la carrera no se puede detener
-    estado.despues = null; estado.pausa = true;
-    $('#btnReiniciar').onclick = () => reanudar(0);
-    $('#btnVolverSala').onclick = () => volverASala();
-    $('#btnReiniciar').focus();
+      <p class="det">El POC detuvo a las tres personas antes de llegar a ${esc(niv.hasta)}.</p>
+      <p class="siguiente">Volviendo a la sala · nuevo sorteo de puestos en <span id="cuentaSig">${Math.ceil(CONFIG.esperaDerrota)}</span></p>`;
+    // perder: de vuelta a la sala y se sortean otra vez los puestos (la partida empieza de nuevo en el nivel 1)
+    estado.despues = 'sala';
   }
 }
 const estrellasHTML = n => `<div class="estrellas" aria-label="${n} de 3 estrellas">${[0, 1, 2].map(i => `<span class="${i < n ? 'on' : ''}" style="animation-delay:${0.45 + i * 0.3}s">★</span>`).join('')}</div>`;
 function sonarEstrellas(n) { for (let i = 0; i < n; i++) setTimeout(() => audio.tocar('cacerola', 0.75, 0.95 + i * 0.07), i * 300); } // cada estrella, un golpe de olla
 function reanudar(n) { if (!estado.pausa) return; estado.pausa = false; empezarNivel(n); }
+function volverASalaYSortear() {
+  estado.despues = null; estado.pausa = false; estado.estrellas = [];
+  ['c1', 'c2', 'c3'].forEach(k => ordenar(k, { estado: 'corriendo' }));   // los teléfonos dejan la pantalla de "detenido"
+  irA('sala'); pintarQR(); sortearPuestos();
+}
 function volverASala() { // los teléfonos siguen conectados; se pueden cambiar nombres y puestos antes de salir otra vez
   if (!estado.pausa) return; estado.pausa = false;
   ['c1', 'c2', 'c3'].forEach(k => ordenar(k, { estado: 'corriendo' }));
@@ -498,13 +515,19 @@ function sello(c) {
 function leerCorredores(dt) {
   corredores.forEach((c, i) => {
     const k = 'c' + (i + 1), tk = TECLAS[i];
-    const g = canal(k, 'ang.g');
-    if (g != null) { // inclinación con histéresis: no tiembla entre dos calles
+    const crudo = canal(k, 'ang.g');
+    // giro calmado: se recorta (un giro brusco no pasa de ±45°), se suaviza, y tras un salto o un cambio de calle
+    // hay una pausa corta. Así un movimiento fuerte no hace saltar al personaje de una calle a otra.
+    if (crudo != null) c.gSuave = lerp(c.gSuave ?? crudo, clamp(crudo, -45, 45), suave(dt, CONFIG.suavizadoGiro));
+    c.espera = Math.max(0, (c.espera || 0) - dt);
+    const g = crudo == null ? null : c.gSuave;
+    if (g != null && c.espera <= 0) { // inclinación con histéresis: no tiembla entre dos calles
       const u = CONFIG.inclinacionCarril, h = CONFIG.histeresis;
       let n = c.carril;
       if (n === 1) { if (g < -u - h) n = 0; else if (g > u + h) n = 2; }
-      else if (n === 0) { if (g > -u + h) n = g > u + h ? 2 : 1; }
-      else if (g < u - h) n = g < -u - h ? 0 : 1;
+      else if (n === 0) { if (g > -u + h) n = 1; }      // de a una calle por vez: nunca de izquierda a derecha de golpe
+      else if (g < u - h) n = 1;
+      if (n !== c.carril) c.espera = CONFIG.pausaCarril;
       if (c.carrilTeclado != null && n === c.carril) n = c.carrilTeclado; else c.carrilTeclado = null;
       cambiarCarril(c, n);
     } else if (c.carrilTeclado != null) cambiarCarril(c, c.carrilTeclado);
@@ -537,7 +560,7 @@ function leerPOC(dt) {
   const tocando = (canal('poc', 'touch.down') || 0) || teclas.has('Space') || raton.abajo;
   if (teclas.has('Space') || raton.abajo) e._sT = (e._sT || 0) + dt; else e._sT = 0;
   const f = teclas.has('Space') || raton.abajo ? clamp(e._sT / 1.1) : fuerzaPOC();
-  e.balizas = lerp(e.balizas, tocando ? 1 : 0, suave(dt, 10));
+  e.balizas = lerp(e.balizas, tocando || f > 0.2 ? 1 : 0, suave(dt, 10));   // soplar también enciende las balizas
   e.fuerza = lerp(e.fuerza, f, suave(dt, 12));
 }
 
@@ -565,7 +588,11 @@ function actualizar(dt) {
       if (el && el.textContent !== String(quedan)) el.textContent = Math.max(1, quedan);
       if (e.faseT > CONFIG.esperaSiguiente) empezarNivel(e.nivel + 1);
     }
-    if (e.despues === 'repetir' && e.faseT > 6) empezarNivel(e.nivel);
+    if (e.despues === 'sala') {
+      const quedan = Math.max(1, Math.ceil(CONFIG.esperaDerrota - e.faseT)), el = $('#cuentaSig');
+      if (el && el.textContent !== String(quedan)) el.textContent = quedan;
+      if (e.faseT > CONFIG.esperaDerrota) volverASalaYSortear();
+    }
   }
 
   // modo de espera (inicio, cinemática, sala): tres personas corren solas, el carro las sigue con balizas
@@ -584,7 +611,7 @@ function actualizar(dt) {
     const mismos = ocupacion[c.carril], desfase = mismos > 1 ? (puesto[c.i] - (mismos - 1) / 2) * 0.36 : 0;
     const lento = 1 - c.cub * 0.4;
     c.x = lerp(c.x, (c.carril - 1) * CONFIG.anchoCarril + desfase, suave(dt, 11 * lento));
-    if (c.quiereSaltar) { c.quiereSaltar = false; if ((jugando || espera) && c.y <= 0.001 && c.cub < 0.5) { c.vy = 5.6; if (jugando) { audio.tocar('salto', 0.7, rnd(0.95, 1.1), c.x / 2); ordenar('c' + (c.i + 1), { vib: 30 }); } } }
+    if (c.quiereSaltar) { c.quiereSaltar = false; c.espera = Math.max(c.espera || 0, CONFIG.pausaSalto); if ((jugando || espera) && c.y <= 0.001 && c.cub < 0.5) { c.vy = 5.6; if (jugando) { audio.tocar('salto', 0.7, rnd(0.95, 1.1), c.x / 2); ordenar('c' + (c.i + 1), { vib: 30 }); } } }
     c.y = Math.max(0, c.y + c.vy * dt); c.vy = c.y > 0 ? c.vy - 16 * dt : 0;
     const antes = c.fasePaso; c.fasePaso += dt * (e.vel / 3.2) * lento;
     if (jugando && c.y <= 0 && Math.floor(antes * 2) !== Math.floor(c.fasePaso * 2)) audio.tocar('paso', 0.32, rnd(0.9, 1.1) * (0.9 + e.vel / 60), c.x / 3);
