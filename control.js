@@ -15,6 +15,7 @@ const r3 = v => Math.round(v * 1000) / 1000;
 const Q = new URLSearchParams(location.search);
 const ES_CIUDADANO = r => r === 'c1' || r === 'c2' || r === 'c3';
 const NOMBRE_ROL = { c1: 'Ciudadano 1', c2: 'Ciudadano 2', c3: 'Ciudadano 3', poc: 'POC' };
+const VERSION = '11-11 soplo3';   // se ve arriba a la derecha del teléfono: confirma que el teléfono cargó la versión nueva
 
 // ---------- entrada ----------
 // El puesto no se elige: lo sortea la pantalla y llega por …/cmd {rol}. Se recuerda por sala, para no perderlo al recargar.
@@ -35,6 +36,7 @@ function recibirRol(r) {
   $('#aviso').textContent = nuevo ? `Te tocó: ${NOMBRE_ROL[rol]}${rol === 'poc' ? ' (carro lanzaaguas)' : ''}.` : $('#aviso').textContent;
   if (nuevo && navigator.vibrate) navigator.vibrate([60, 60, 60]);
   $('#btnMic').hidden = rol !== 'poc' || mic.on;   // el POC necesita el micrófono: se activa con un toque (lo exige el navegador)
+  if (rol === 'poc' && !mic.on && mic.error) $('#aviso').textContent = mic.error;   // al POC se le explica cómo desbloquearlo
   publicarEstado();
 }
 
@@ -46,7 +48,10 @@ function recibirRol(r) {
 const SOPLO_DB = 26;        // dB sobre el fondo que cuentan como "soplar a fondo" (más bajo = más sensible)
 const SOPLO_MIN_DB = 8;    // dB sobre el fondo que se ignoran (ruido de la sala, voces lejanas)
 const mic = { on: false, ac: null, an: null, fdb: null, fd: null, piso: null, graves: 0, soplo: 0, bandas: [0, 0, 0] };
-async function activarMic() {
+// se pide al tocar "Entrar" (todos los teléfonos, porque el puesto se sortea y cualquiera puede ser POC),
+// y de nuevo con el botón amarillo si falló. Solo el POC lo analiza; a los ciudadanos no se les escucha.
+async function activarMic(alEntrar = false) {
+  if (mic.on) return;
   try {
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) throw new Error('Este navegador no deja usar el micrófono aquí (necesita HTTPS).');
     // el AudioContext se crea DENTRO del toque, antes de esperar el permiso: si no, iPhone lo deja suspendido y mide silencio
@@ -56,13 +61,20 @@ async function activarMic() {
     const an = ac.createAnalyser(); an.fftSize = 1024; an.smoothingTimeConstant = 0.2; an.minDecibels = -100; an.maxDecibels = -10;
     ac.createMediaStreamSource(st).connect(an);
     Object.assign(mic, { on: true, an, fdb: new Float32Array(an.frequencyBinCount), fd: new Uint8Array(an.frequencyBinCount), piso: null, n: 0 });
-    $('#btnMic').hidden = true; $('#aviso').textContent = 'Micrófono listo: sopla para soltar el agua.';
+    $('#btnMic').hidden = true; pintarEstadoMic();
+    if (!alEntrar || rol === 'poc') $('#aviso').textContent = 'Micrófono listo: sopla para soltar el agua.';
     publicarEstado();
   } catch (e) {
-    const motivo = e && e.name === 'NotAllowedError' ? 'No se dio permiso al micrófono.' : e && e.name === 'NotFoundError' ? 'Este teléfono no tiene micrófono disponible.' : (e && e.message) || 'No se pudo usar el micrófono.';
-    $('#aviso').textContent = motivo + ' Sin micrófono, aprieta fuerte la pantalla para el agua.';
+    pintarEstadoMic();
+    const iphone = /iPhone|iPad/.test(navigator.userAgent);
+    const motivo = e && e.name === 'NotAllowedError'
+      ? `El micrófono está bloqueado para esta página. ${iphone ? 'En iPhone: toca "aA" en la barra de Safari → Ajustes del sitio web → Micrófono → Permitir, y recarga.' : 'En Android: toca el candado junto a la dirección → Permisos → Micrófono → Permitir, y recarga.'}`
+      : e && e.name === 'NotFoundError' ? 'Este teléfono no tiene micrófono disponible.' : (e && e.message) || 'No se pudo usar el micrófono.';
+    mic.error = motivo + ' Mientras tanto, el POC suelta el agua apretando fuerte la pantalla.';
+    if (rol === 'poc' || !alEntrar) { $('#aviso').textContent = mic.error; $('#btnMic').hidden = false; }
   }
 }
+function pintarEstadoMic() { $('#info').textContent = `sala ${sala} · mic ${mic.on ? '●' : '○'} · v${VERSION}`; }
 setInterval(() => {
   if (!mic.on || rol !== 'poc') return;
   if (mic.ac && mic.ac.state !== 'running') mic.ac.resume();
@@ -105,7 +117,7 @@ async function conectar() {
   const will = { topic: `${base}/status`, payload: JSON.stringify({ online: false, name: nombre, caps: { rol } }), qos: 1, retain: true };
   const o = await Tacto.open({ clientId: 'tel-' + dev, will });
   client = o.client;
-  $('#info').textContent = 'sala ' + sala;
+  pintarEstadoMic();
   client.on('connect', () => { $('#estado').textContent = '● conectado'; $('#estado').className = 'on'; client.subscribe(`${base}/cmd`); publicarEstado(); });
   client.on('reconnect', () => { $('#estado').textContent = 'reconectando…'; $('#estado').className = 'mal'; });
   client.on('offline', () => { $('#estado').textContent = 'sin conexión'; $('#estado').className = 'mal'; });
@@ -280,13 +292,16 @@ $('#ir').onclick = async () => {
   nombre = $('#nombre').value.trim().slice(0, 14);
   ls('tacto.sala', sala); ls('cp.nombre', nombre);
   rol = NOMBRE_ROL[ls('cp.rol.' + sala)] ? ls('cp.rol.' + sala) : ''; // si recargó en la misma sala, conserva su puesto
+  // micrófono: se pide AQUÍ, en el mismo toque de "Entrar" (iPhone y Android solo muestran el permiso tras un toque)
+  const pidiendoMic = activarMic(true);
   try { await pedirMovimiento(); ligarMovimiento(); motionOn = true; }
   catch (e) { $('#aviso').textContent = e.message + ' Sin giro, juega solo con el tacto.'; }
   if (!window.isSecureContext) $('#aviso').textContent = 'Los sensores de movimiento necesitan HTTPS: abre la versión publicada en GitHub Pages.';
   $('#rolNombre').textContent = 'Sorteando puesto…';
   $('#rolDato').textContent = 'mira la pantalla grande';
   if (rol) recibirRol(rol);
-  $('#entrar').hidden = true; $('#jugar').hidden = false;
+  $('#entrar').hidden = true; $('#jugar').hidden = false; pintarEstadoMic();
+  pidiendoMic.then(() => { if (rol === 'poc') { $('#btnMic').hidden = mic.on; if (!mic.on && mic.error) $('#aviso').textContent = mic.error; } });
   ajustar(); dibujar(); despertar();
   document.addEventListener('visibilitychange', () => document.visibilityState === 'visible' && despertar());
   setInterval(publicarEstado, 3000);
