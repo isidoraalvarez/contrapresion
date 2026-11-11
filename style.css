@@ -110,6 +110,7 @@ body.pantalla { overflow: hidden; }
 .pie { display: flex; flex-wrap: wrap; align-items: center; gap: 14px 22px; }
 .pie .sala-id { font-size: 12px; letter-spacing: .14em; text-transform: uppercase; color: var(--cal-mut); display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .pie .sala-id b { font-size: 24px; color: var(--valla); letter-spacing: .12em; }
+#conexion.on { color: #7dffa8; }   /* MQTT conectado: verde, igual que los puestos con teléfono */
 #btnSalir:disabled { opacity: .35; cursor: not-allowed; }
 .pie .faltan { flex-basis: 100%; font-size: 13px; color: var(--valla); }
 .puesto.vacio { opacity: .5; }
