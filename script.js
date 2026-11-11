@@ -2,11 +2,12 @@
  *
  * Cuatro teléfonos por MQTT (librería tacto.js):
  *   CIUDADANOS 1·2·3   inclinación (ang.g) → calle · tirón (evento salto) → salto
- *                      palma abierta (touch.n + touch.k) → se cubre y EMPUJA DE VUELTA el agua (contrapresión)
+ *                      3 dedos (touch.n) → levanta el ESCUDO, que bloquea el agua (contrapresión)
+ *                      deslizar un dedo hacia abajo (evento agacharse) → se agacha bajo lo que cuelga
  *   POC                posición del dedo (touch.x) → dónde cae el agua · inclinación (ang.g) → carro, si no toca
  *                      toque (touch.down) → balizas y sirena · fuerza del dedo (touch.k) → agua
- *   Agua en la pantalla = fuerza del POC × (1 − palmas de los ciudadanos vivos / 3 × CONFIG.contrapresion)
- * Lo que no tiene teléfono se juega con el teclado (ver TECLAS).
+ *   Agua en la pantalla = fuerza del POC × (1 − escudos arriba de los ciudadanos en carrera / 3 × CONFIG.contrapresion)
+ * Se juega SOLO con teléfonos: mínimo 2 (el POC y un ciudadano). Los puestos sin teléfono no corren.
  *
  * Índice
  *   1. CONFIG              niveles, textos, nombre del antagonista
@@ -26,7 +27,7 @@ const CONFIG = {
   antagonista: 'KAST',
   // Dirección pública del juego (GitHub Pages), para que los QR funcionen aunque abras la pantalla desde VS Code.
   // Ej: 'https://usuario.github.io/contrapresion/'. Si queda vacía, los QR usan la dirección de esta página.
-  urlPublica: '',
+  urlPublica: 'https://isidoraalvarez.github.io/contrapresion/',
   anchoCarril: 1.25,          // metros
   inclinacionCarril: 18,      // grados de ang.g para cambiar de calle (más alto = hay que inclinar más)
   histeresis: 6,              // margen para volver al centro (evita que tiemble entre dos calles)
@@ -36,8 +37,9 @@ const CONFIG = {
   inclinacionCarro: 35,       // grados de ang.g para llevar el carro al borde
   umbralAgua: 0.42,           // fuerza mínima del dedo para que salga agua (0–1), si no hay micrófono
   umbralSoplo: 0.12,          // soplo mínimo (0–1) para que salga agua. Más bajo = basta un soplo suave
-  contrapresion: 0.8,         // cuánta agua frenan las tres palmas juntas (0–1). Una sola palma frena un tercio de eso
-  manoPorDedo: 0.25,          // cada dedo apoyado suma esto a la palma (4 dedos = mano completa)
+  contrapresion: 0.9,         // cuánta agua bloquean los tres escudos juntos (0–1). Un escudo bloquea un tercio de eso
+  dedosEscudo: 3,             // dedos apoyados (exactamente) para levantar el escudo
+  duracionAgachado: 0.9,      // segundos que queda agachado tras deslizar un dedo hacia abajo
   volumenProtesta: 0.85,      // volumen de la multitud protestando (InspectorJ, Freesound), la calle de fondo (0–1)
   llenadoPorSacudida: 0.07,   // cada sacudida del teléfono del POC llena esto del estanque (~15 sacudidas = lleno)
   saltarCinematica: 3,        // segundos que hay que mantener apretado para saltar la cinemática
@@ -169,6 +171,7 @@ tacto.on('datos', (d, kind, m) => {
     else ultimoMic[d.id] = performance.now();
   }
   if (kind === 'evento' && m.tipo === 'agitar' && jugadores.poc === d.id) estado.agitar = (estado.agitar || 0) + 1; // el POC agita: entra agua al estanque
+  if (kind === 'evento' && m.tipo === 'agacharse') { const i = ['c1', 'c2', 'c3'].findIndex(k => jugadores[k] === d.id); if (i >= 0) corredores[i].agachaHasta = estado.t + CONFIG.duracionAgachado; }
   if (kind === 'evento') { d._evento = true; if (m.tipo === 'salto') { const i = ['c1', 'c2', 'c3'].findIndex(k => jugadores[k] === d.id); if (i >= 0) corredores[i].quiereSaltar = true; } }
   if (kind === 'motion' && m.c && !d._evento) { // respaldo para el control original de Tacto: tirón medido aquí
     const i = ['c1', 'c2', 'c3'].findIndex(k => jugadores[k] === d.id);
@@ -193,11 +196,10 @@ function fuerzaPOC() {
   }
   return clamp(k + (m.n - 1) * 0.15);
 }
-// la mano abierta de un ciudadano sobre su vidrio (0–1): más dedos y más superficie, más contrapresión
-function palmaDe(puesto) {
-  const id = jugadores[puesto]; if (!id || !canal(puesto, 'touch.n')) return 0;
-  const m = ultimoTacto[id]; if (!m || !m.n) return 0;
-  return clamp(Math.max(typeof m.k === 'number' ? m.k : 0, m.n * CONFIG.manoPorDedo));
+// escudo: un ciudadano apoya 3 dedos sobre su vidrio → levanta el escudo (0/1).
+// (La palma entera no sirve: los teléfonos la descartan como toque accidental.)
+function escudoDe(puesto) {
+  return (canal(puesto, 'touch.n') || 0) === CONFIG.dedosEscudo ? 1 : 0;   // exactamente 3: ni 2 ni 4
 }
 const ultimaOrden = {};
 function ordenar(puesto, msg, cada = 0) { // la pantalla le habla al teléfono: vibración y estado
@@ -207,28 +209,16 @@ function ordenar(puesto, msg, cada = 0) { // la pantalla le habla al teléfono: 
   tacto.client.publish(`tacto/${tacto.sala}/${id}/cmd`, JSON.stringify(msg));
 }
 
-// ============================ 3. TECLADO Y RATÓN ============================
-const TECLAS = [
-  { izq: 'KeyA', der: 'KeyD', salto: 'KeyW', cubrir: 'KeyS', txt: 'A D · W · S' },
-  { izq: 'KeyJ', der: 'KeyL', salto: 'KeyI', cubrir: 'KeyK', txt: 'J L · I · K' },
-  { izq: 'ArrowLeft', der: 'ArrowRight', salto: 'ArrowUp', cubrir: 'ArrowDown', txt: '← → · ↑ · ↓' },
-];
+// ============================ 3. TECLADO (solo la pantalla: sonido, cinemática, sala) ============================
+// Los jugadores se juegan SOLO con el teléfono. El teclado del computador no controla a nadie.
 const teclas = new Set();
-const raton = { abajo: false, t0: 0, x: 0.5, usado: false };
 let saltarCine = 0;
 addEventListener('keydown', e => {
-  if (e.target.matches && e.target.matches('input')) { if (e.code === 'Enter' && estado.fase === 'sala') salirALaCalle(); return; }
-  if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code)) e.preventDefault();
+  if (e.target.matches && e.target.matches('input')) return;
+  if (e.code === 'Space') e.preventDefault();
   if (e.repeat) return;
   teclas.add(e.code);
-  TECLAS.forEach((k, i) => {
-    const c = corredores[i];
-    if (e.code === k.izq) c.carrilTeclado = Math.max(0, (c.carrilTeclado ?? c.carril) - 1);
-    if (e.code === k.der) c.carrilTeclado = Math.min(2, (c.carrilTeclado ?? c.carril) + 1);
-    if (e.code === k.salto) c.quiereSaltar = true;
-  });
   if (e.code === 'KeyM') audio.silenciar();
-  if (e.code === 'KeyF') estado.agitar = (estado.agitar || 0) + 1;   // POC sin teléfono: cada F es una sacudida
   if (e.code === 'Minus' || e.code === 'NumpadSubtract') audio.ponerVolumen(audio.volumen - 0.1);
   if (e.code === 'Equal' || e.code === 'NumpadAdd' || e.code === 'BracketRight') audio.ponerVolumen(audio.volumen + 0.1);
   if (estado.pausa && e.code === 'KeyR') reanudar(0);
@@ -239,9 +229,6 @@ addEventListener('keydown', e => {
 addEventListener('keyup', e => teclas.delete(e.code));
 addEventListener('blur', () => teclas.clear());
 const cv = $('#escena');
-cv.addEventListener('pointerdown', e => { if (estado.fase !== 'juego') return; raton.abajo = true; raton.t0 = performance.now(); raton.usado = true; raton.x = e.clientX / innerWidth; });
-addEventListener('pointermove', e => { raton.x = e.clientX / innerWidth; });
-addEventListener('pointerup', () => { raton.abajo = false; });
 // saltar la cinemática: mantener espacio / Enter / el botón
 const btnSaltar = $('#saltar');
 btnSaltar.addEventListener('pointerdown', e => { btnSaltar.setPointerCapture(e.pointerId); btnSaltar._abajo = true; });
@@ -363,7 +350,7 @@ const estado = {
   nivel: 0, t: 0, faseT: 0,
   metros: 0, vel: 9, obst: [], proxFila: 30, hitos: 100,
   vehX: 0, apunta: 0, balizas: 0, fuerza: 0, agua: 0, estanque: 1, ruido: 0, flash: 0,
-  gotas: [], particulas: [], cineI: 0, cineT: 0, despues: null, estrellas: [],
+  gotas: [], particulas: [], cineI: 0, cineT: 0, despues: null, estrellas: [], estrellasMax: [],
 };
 const nivelActual = () => CONFIG.niveles[estado.nivel];
 const vivos = () => corredores.filter(c => c.vivo);
@@ -398,21 +385,26 @@ function pintarPuestos() {
     cont.innerHTML = PUESTOS.map((k, i) => `
       <article class="puesto ${k}">
         <h3>${k === 'poc' ? 'POC · lanzaaguas' : 'Ciudadano ' + (i + 1)}</h3>
-        <div class="estado" id="est-${k}">sin teléfono · teclado</div>
-        ${k === 'poc' ? '<div class="teclas">Policía del Orden de Chile. El dedo apunta, tocar enciende las balizas, apretar suelta el agua.</div>'
-          : `<label for="nom-${k}">Nombre<input id="nom-${k}" maxlength="14" autocomplete="off" spellcheck="false" value="${esc(corredores[i].nombre)}"></label>`}
-        <div class="teclas">Teclado: ${k === 'poc' ? '<kbd>Espacio</kbd> mantener · <kbd>Q</kbd> <kbd>E</kbd> o ratón apuntar' : TECLAS[i].txt.split(' · ').map(t => `<kbd>${t}</kbd>`).join(' ')}</div>
+        <div class="estado" id="est-${k}">libre · no juega</div>
+        <div class="teclas">${k === 'poc' ? 'Policía del Orden de Chile. Sopla para el agua, el dedo apunta, agita para llenar el estanque.' : 'Inclina, tira para saltar, desliza hacia abajo para agacharte, 3 dedos para el escudo.'}</div>
       </article>`).join('');
-    ['c1', 'c2', 'c3'].forEach((k, i) => $('#nom-' + k).addEventListener('input', e => { corredores[i].nombre = e.target.value.trim().slice(0, 14) || `Ciudadano ${i + 1}`; }));
   }
-  PUESTOS.forEach((k, i) => {
+  PUESTOS.forEach(k => {
     const d = tacto.devices[jugadores[k]], on = !!(d && d.online);
     const rtt = d && d.rtt.length ? ' · ' + Math.round([...d.rtt].sort((a, b) => a - b)[d.rtt.length >> 1]) + ' ms' : '';
     const apodo = on && d.name && d.name !== d.id && k !== 'poc' ? ` · ${d.name.slice(0, 14)}` : '';
-    const el = $('#est-' + k); el.textContent = on ? `● le tocó a un teléfono${apodo}${rtt}` : 'libre · teclado'; el.classList.toggle('on', on);
-    if (k !== 'poc') { const inp = $('#nom-' + k); if (on && document.activeElement !== inp) inp.value = corredores[i].nombre; inp.disabled = on; }
+    const el = $('#est-' + k); el.textContent = on ? `● le tocó a un teléfono${apodo}${rtt}` : 'libre · no juega'; el.classList.toggle('on', on);
+    el.closest('.puesto').classList.toggle('vacio', !on);
   });
+  // se juega solo con teléfonos: hacen falta al menos 2 (el POC y un ciudadano). Los puestos libres no corren.
+  const listo = puedeSalir(), btn = $('#btnSalir');
+  if (btn) { btn.disabled = !listo; btn.title = listo ? '' : 'Faltan teléfonos'; }
+  const falta = $('#faltan');
+  if (falta) falta.textContent = listo ? `Juegan ${ciudadanosConTelefono().length} ciudadano${ciudadanosConTelefono().length === 1 ? '' : 's'} y el POC. Los puestos libres no corren.`
+    : 'Faltan teléfonos: se necesitan al menos 2 (el POC y un ciudadano). No se puede jugar de a uno.';
 }
+const ciudadanosConTelefono = () => ['c1', 'c2', 'c3'].filter(k => { const d = tacto.devices[jugadores[k]]; return d && d.online; });
+function puedeSalir() { const d = tacto.devices[jugadores.poc]; return !!(d && d.online) && ciudadanosConTelefono().length >= 1; }
 const qrLib = () => window.qrcode ? Promise.resolve() : new Promise((ok, no) => { const s = document.createElement('script'); s.src = 'https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js'; s.onload = ok; s.onerror = no; document.head.appendChild(s); });
 async function servidorLocal() { try { const i = await (await fetch('info', { cache: 'no-store' })).json(); return i && i.baseUrl; } catch { return null; } }
 async function pintarQR() {
@@ -441,15 +433,17 @@ async function pintarQR() {
 $('#btnSortear').onclick = () => sortearPuestos();
 $('#btnNuevaSala').onclick = () => { tacto.cambiarSala(); PUESTOS.forEach(k => { jugadores[k] = null; }); pintarQR(); pintarPuestos(); };
 $('#btnSalir').onclick = () => salirALaCalle();
-function salirALaCalle() { if (document.activeElement) document.activeElement.blur(); empezarNivel(0); }
+function salirALaCalle() { if (!puedeSalir()) return; if (document.activeElement) document.activeElement.blur(); empezarNivel(0); }
 
 // ---------- niveles ----------
 function empezarNivel(n) {
   estado.nivel = n;
-  if (n === 0) estado.estrellas = [];   // partida nueva: las estrellas parten de cero
+  if (n === 0) { estado.estrellas = []; estado.estrellasMax = []; }   // partida nueva: las estrellas parten de cero
   const niv = nivelActual();
   Object.assign(estado, { metros: 0, vel: niv.vel[0], obst: [], proxFila: 32, hitos: 100, estanque: 1, recargando: false, gotas: [], particulas: [], agua: 0 });
-  corredores.forEach((c, i) => Object.assign(c, { vivo: true, llego: false, salida: 0, carril: i, carrilTeclado: null, x: (i - 1) * CONFIG.anchoCarril, y: 0, vy: 0, cub: 0, quiereSaltar: false }));
+  // solo corren los ciudadanos que tienen teléfono; los puestos libres no aparecen
+  corredores.forEach((c, i) => { const activo = !!jugadores['c' + (i + 1)]; Object.assign(c, { activo, vivo: activo, llego: false, salida: activo ? 0 : 1, carril: i, carrilTeclado: null, x: (i - 1) * CONFIG.anchoCarril, y: 0, vy: 0, cub: 0, escudo: 0, agachaHasta: 0, quiereSaltar: false }); });
+  estado.enJuego = corredores.filter(c => c.activo).length;
   ['c1', 'c2', 'c3'].forEach(k => ordenar(k, { estado: 'corriendo' }));
   $('#hudNum').textContent = `Nivel ${n + 1} de ${CONFIG.niveles.length}`;
   $('#hudNivel').textContent = niv.nombre; $('#hudFecha').textContent = niv.fecha;
@@ -471,20 +465,23 @@ function pintarPlacaNivel() {
 }
 function terminarNivel(ganan) {
   const niv = nivelActual(), ultimo = estado.nivel === CONFIG.niveles.length - 1;
-  const nombres = corredores.map(c => `<span class="c${c.i + 1}${c.llego ? '' : ' fuera'}" style="--color:${c.color}">${esc(c.nombre)}</span>`).join('');
+  const enJuego = corredores.filter(c => c.activo), na = Math.max(1, enJuego.length);
+  const nombres = enJuego.map(c => `<span class="c${c.i + 1}${c.llego ? '' : ' fuera'}" style="--color:${c.color}">${esc(c.nombre)}</span>`).join('');
   irA('resultado');
-  // estrellas: una por cada persona que llega a la meta. La nota es del grupo, no de quien llegó
-  const n = corredores.filter(c => c.llego).length;
-  if (ganan) estado.estrellas[estado.nivel] = n;
-  const total = estado.estrellas.reduce((s, x) => s + (x || 0), 0), max = CONFIG.niveles.length * 3;
-  const frase = ['', 'Llegó una sola voz.', 'Llegaron dos de tres.', 'Llegaron las tres personas juntas.'][n];
+  // estrellas: una por cada persona que llega a la meta, sobre las que jugaban. La nota es del grupo, no de quien llegó
+  const n = enJuego.filter(c => c.llego).length;
+  if (ganan) { estado.estrellas[estado.nivel] = n; estado.estrellasMax[estado.nivel] = na; }
+  const total = estado.estrellas.reduce((s, x) => s + (x || 0), 0);
+  const max = CONFIG.niveles.reduce((s, _, i) => s + (estado.estrellasMax[i] ?? na), 0);
+  const numero = ['', 'una', 'dos', 'tres'];
+  const frase = n === na ? (na === 1 ? 'Llegó.' : `Llegaron ${na === 2 ? 'las dos' : 'las tres'} personas juntas.`) : `Llegaron ${numero[n]} de ${numero[na]}.`;
   const premio = ['', 'Una estrella', 'Dos estrellas', 'Tres estrellas'][n];
-  const motivo = ['', 'por sobrevivir una persona', 'por sobrevivir dos personas', 'por sobrevivir las tres personas'][n];
+  const motivo = n === 1 ? 'por sobrevivir una persona' : n === na ? `por sobrevivir ${na === 2 ? 'las dos' : 'las tres'} personas` : `por sobrevivir ${numero[n]} personas`;
   if (ganan) setTimeout(() => sonarEstrellas(n), 450);
   if (ganan && ultimo) {
     $('#placa').className = 'capa final';
-    $('#placaCaja').innerHTML = `<p class="num">Fin del recorrido</p><h2 class="titulo">Llegaron a La Moneda</h2>${estrellasHTML(n)}<div class="nombres">${nombres}</div>
-      <p class="sub">${frase} Recorrido completo: <b>${total} de ${max}</b> estrellas · ${CONFIG.niveles.map((v, i) => `${esc(v.nombre)} ${'★'.repeat(estado.estrellas[i] || 0)}${'☆'.repeat(3 - (estado.estrellas[i] || 0))}`).join(' · ')}</p>
+    $('#placaCaja').innerHTML = `<p class="num">Fin del recorrido</p><h2 class="titulo">Llegaron a La Moneda</h2>${estrellasHTML(n, na)}<div class="nombres">${nombres}</div>
+      <p class="sub">${frase} Recorrido completo: <b>${total} de ${max}</b> estrellas · ${CONFIG.niveles.map((v, i) => `${esc(v.nombre)} ${'★'.repeat(estado.estrellas[i] || 0)}${'☆'.repeat(Math.max(0, (estado.estrellasMax[i] ?? na) - (estado.estrellas[i] || 0)))}`).join(' · ')}</p>
       <p class="det">${total === max ? 'Nadie quedó atrás.' : 'Bastó con que una persona llegara, pero la voz es más fuerte cuando llegan todas.'} Las vallas siguen ahí, los carteles también. La calle sigue hablando.</p>
       <button class="boton accion" id="btnOtraVez">Volver a empezar</button>`;
     $('#btnOtraVez').onclick = () => { irA('sala'); pintarPuestos(); pintarQR(); };
@@ -492,7 +489,7 @@ function terminarNivel(ganan) {
   } else if (ganan) {
     $('#placa').className = 'capa';
     const sig = CONFIG.niveles[estado.nivel + 1];
-    $('#placaCaja').innerHTML = `<p class="num">Nivel ${estado.nivel + 1} superado · Llegaron a ${esc(niv.hasta)}</p>${estrellasHTML(n)}
+    $('#placaCaja').innerHTML = `<p class="num">Nivel ${estado.nivel + 1} superado · Llegaron a ${esc(niv.hasta)}</p>${estrellasHTML(n, na)}
       <h2 class="titulo premio">${premio}</h2>
       <p class="sub">${motivo} · llevan <b>${total} de ${max}</b> estrellas</p>
       <div class="nombres">${nombres}</div>
@@ -502,13 +499,13 @@ function terminarNivel(ganan) {
   } else {
     $('#placa').className = 'capa disuelta';
     $('#placaCaja').innerHTML = `<p class="num">${esc(niv.nombre)} · ${Math.floor(estado.metros)} de ${niv.meta} m</p><h2 class="titulo">Esta vez no llegaron</h2><div class="nombres">${nombres}</div>
-      <p class="det">El agua alcanzó a las tres personas antes de llegar a ${esc(niv.hasta)}. Se vuelve a intentar, juntos.</p>
+      <p class="det">El agua alcanzó a ${na === 1 ? 'la persona que corría' : `${na === 2 ? 'las dos' : 'las tres'} personas`} antes de llegar a ${esc(niv.hasta)}. Se vuelve a intentar, juntos.</p>
       <p class="siguiente">Volviendo a la sala · nuevo sorteo de puestos en <span id="cuentaSig">${Math.ceil(CONFIG.esperaDerrota)}</span></p>`;
     // perder: de vuelta a la sala y se sortean otra vez los puestos (la partida empieza de nuevo en el nivel 1)
     estado.despues = 'sala';
   }
 }
-const estrellasHTML = n => `<div class="estrellas" aria-label="${n} de 3 estrellas">${[0, 1, 2].map(i => `<span class="${i < n ? 'on' : ''}" style="animation-delay:${0.45 + i * 0.3}s">★</span>`).join('')}</div>`;
+const estrellasHTML = (n, max = 3) => `<div class="estrellas" aria-label="${n} de ${max} estrellas">${Array.from({ length: max }, (_, i) => i).map(i => `<span class="${i < n ? 'on' : ''}" style="animation-delay:${0.45 + i * 0.3}s">★</span>`).join('')}</div>`;
 function sonarEstrellas(n) { for (let i = 0; i < n; i++) setTimeout(() => audio.tocar('cacerola', 0.75, 0.95 + i * 0.07), i * 300); } // cada estrella, un golpe de olla
 function reanudar(n) { if (!estado.pausa) return; estado.pausa = false; empezarNivel(n); }
 function volverASalaYSortear() {
@@ -523,8 +520,8 @@ function volverASala() { // los teléfonos siguen conectados; se pueden cambiar 
 }
 function pintarFichas() {
   const cont = $('#fichas'); if (!cont) return;
-  cont.innerHTML = corredores.map(c => `<div class="ficha${c.vivo ? '' : ' fuera'}" style="--color:${c.color}"><b>${esc(c.nombre)}</b><span>${c.llego ? 'llegó' : c.vivo ? (jugadores['c' + (c.i + 1)] ? 'teléfono' : 'teclado') : 'fuera de la ronda'}</span></div>`).join('')
-    + `<div class="ficha poc" style="--color:var(--poc)"><b>POC</b><span>${jugadores.poc ? 'teléfono' : 'teclado'}</span></div>`;
+  cont.innerHTML = corredores.filter(c => c.activo).map(c => `<div class="ficha${c.vivo ? '' : ' fuera'}" style="--color:${c.color}"><b>${esc(c.nombre)}</b><span>${c.llego ? 'llegó' : c.vivo ? 'corriendo' : 'fuera de la ronda'}</span></div>`).join('')
+    + `<div class="ficha poc" style="--color:var(--poc)"><b>POC</b><span>lanzaaguas</span></div>`;
 }
 function sello(c) {
   const el = document.createElement('div'); el.className = 'sello'; el.style.setProperty('--color', c.color);
@@ -535,7 +532,7 @@ function sello(c) {
 // ============================ 6. SIMULACIÓN ============================
 function leerCorredores(dt) {
   corredores.forEach((c, i) => {
-    const k = 'c' + (i + 1), tk = TECLAS[i];
+    const k = 'c' + (i + 1);   // (carrilTeclado solo lo usa el modo de espera, cuando corren solos de fondo)
     const crudo = canal(k, 'ang.g');
     // giro calmado: se recorta (un giro brusco no pasa de ±45°), se suaviza, y tras un salto o un cambio de calle
     // hay una pausa corta. Así un movimiento fuerte no hace saltar al personaje de una calle a otra.
@@ -552,12 +549,16 @@ function leerCorredores(dt) {
       if (c.carrilTeclado != null && n === c.carril) n = c.carrilTeclado; else c.carrilTeclado = null;
       cambiarCarril(c, n);
     } else if (c.carrilTeclado != null) cambiarCarril(c, c.carrilTeclado);
-    // palma: cualquier contacto agacha; cuánta mano se apoya decide cuánto empuja el agua
-    const p = teclas.has(tk.cubrir) ? 1 : palmaDe(k);
-    if (p > 0 && !c.apoya && estado.fase === 'juego' && c.vivo) audio.tocar('carril', 0.7, 0.6, c.x / 3); // la palma golpea el vidrio
-    c.apoya = p > 0;
-    c.palma = lerp(c.palma || 0, c.vivo ? p : 0, suave(dt, 12));
-    c.cub = lerp(c.cub, p > 0 ? 1 : 0, suave(dt, 10));
+    // escudo: 3 dedos levantan el escudo, que bloquea el agua
+    const esc = escudoDe(k);
+    if (esc && !c.conEscudo && estado.fase === 'juego' && c.vivo) audio.tocar('valla', 0.45, 1.35, c.x / 3); // el escudo se levanta: golpe metálico
+    c.conEscudo = esc > 0;
+    c.escudo = lerp(c.escudo || 0, c.vivo ? esc : 0, suave(dt, 14));
+    // agacharse: deslizar un dedo hacia abajo (evento 'agacharse') lo agacha un momento
+    const abajo = estado.t < (c.agachaHasta || 0);
+    if (abajo && !c.abajo && estado.fase === 'juego' && c.vivo) audio.tocar('carril', 0.6, 0.75, c.x / 3);   // roce al agacharse
+    c.abajo = abajo;
+    c.cub = lerp(c.cub, abajo ? 1 : 0, suave(dt, 14));
   });
 }
 function cambiarCarril(c, n) {
@@ -572,15 +573,10 @@ function leerPOC(dt) {
   let objetivo;
   if (dedo != null) objetivo = (clamp(dedo) * 2 - 1) * 1.6;           // el agua cae donde está el dedo: se toca la imagen
   else if (g != null) objetivo = clamp(g / CONFIG.inclinacionCarro, -1, 1) * 1.6;
-  else {
-    if (raton.usado && raton.abajo) e._vehT = (raton.x * 2 - 1) * 1.6;
-    e._vehT = clamp((e._vehT ?? 0) + ((teclas.has('KeyE') ? 1 : 0) - (teclas.has('KeyQ') ? 1 : 0)) * dt * 2.6, -1.6, 1.6);
-    objetivo = e._vehT;
-  }
+  else objetivo = e.vehX;
   e.vehX = lerp(e.vehX, objetivo, suave(dt, dedo != null ? 5 : 2.2));   // el carro pesa; con el dedo responde más rápido
-  const tocando = (canal('poc', 'touch.down') || 0) || teclas.has('Space') || raton.abajo;
-  if (teclas.has('Space') || raton.abajo) e._sT = (e._sT || 0) + dt; else e._sT = 0;
-  const f = teclas.has('Space') || raton.abajo ? clamp(e._sT / 1.1) : fuerzaPOC();
+  const tocando = canal('poc', 'touch.down') || 0;
+  const f = fuerzaPOC();
   e.balizas = lerp(e.balizas, tocando || f > 0.2 ? 1 : 0, suave(dt, 10));   // soplar también enciende las balizas
   e.fuerza = lerp(e.fuerza, f, suave(dt, 12));
 }
@@ -619,7 +615,8 @@ function actualizar(dt) {
   // modo de espera (inicio, cinemática, sala): tres personas corren solas, el carro las sigue con balizas
   const espera = e.fase === 'inicio' || e.fase === 'cine' || e.fase === 'sala';
   if (espera) {
-    corredores.forEach(c => { if (Math.random() < dt * 0.25) c.carrilTeclado = Math.floor(rnd(0, 3)); if (c.carrilTeclado != null) c.carril = c.carrilTeclado; });
+    // de fondo corren los tres (es solo ambiente); en la partida, solo los que tienen teléfono
+    corredores.forEach(c => { c.vivo = true; c.salida = 0; if (Math.random() < dt * 0.25) c.carrilTeclado = Math.floor(rnd(0, 3)); if (c.carrilTeclado != null) c.carril = c.carrilTeclado; });
     e.balizas = lerp(e.balizas, Math.sin(e.t * 0.4) > 0.3 ? 1 : 0, suave(dt, 3));
     e.vehX = Math.sin(e.t * 0.3) * 1.2;
   }
@@ -641,8 +638,11 @@ function actualizar(dt) {
   // umbral: soplar tiene uno más bajo que apretar (un soplo normal ya debe sacar agua)
   const umbral = POCsopla() ? CONFIG.umbralSoplo : CONFIG.umbralAgua;
   const quiere = e.fuerza > umbral ? Math.min(1, (e.fuerza - umbral) / (1 - umbral) * 1.25) : 0;
-  // contrapresión: las palmas de los ciudadanos vivos empujan de vuelta. Una sola casi no alcanza; las tres juntas sí
-  e.contra = jugando ? vivos().reduce((s, c) => s + c.palma, 0) / 3 : 0;
+  // contrapresión: los escudos de los ciudadanos en carrera bloquean el agua. Uno solo no alcanza; los tres juntos sí
+  // escudos arriba (0–1), sobre los ciudadanos que juegan: con 2 jugadores, cada escudo bloquea la mitad
+  e.contra = jugando ? vivos().reduce((s, c) => s + c.escudo, 0) / Math.max(1, e.enJuego || 3) : 0;
+  // si un teléfono se desconecta en plena carrera, su ciudadano sale (sin sello)
+  if (jugando) corredores.forEach(c => { if (c.activo && c.vivo && !jugadores['c' + (c.i + 1)]) { c.vivo = false; pintarFichas(); } });
   // estanque: se gasta al apretar y NO se llena solo. Se llena agitando el teléfono del POC (evento 'agitar').
   // Si se vacía, el carro queda SECO hasta llenarlo entero.
   const sale = jugando && !e.recargando ? quiere : 0;                           // lo que aprieta el POC (y gasta)
@@ -658,11 +658,14 @@ function actualizar(dt) {
   }
   if (e.recargando && e.estanque >= 1) { e.recargando = false; audio.tocar('silbato', 0.35, 1.25); ordenar('poc', { vib: [30] }); }
   if (jugando) ordenar('poc', { estanque: Math.round(e.estanque * 100) / 100, seco: e.recargando }, 200); // el teléfono del POC muestra su estanque
-  const unidos = e.contra > 0.62 && sale > 0.1;   // las tres manos frenan el chorro: suena la olla
+  const vv = vivos(), unidos = vv.length >= 1 && vv.every(c => c.escudo > 0.8) && sale > 0.1;   // todos los escudos arriba frenan el chorro: suena la olla
   if (unidos && !e.unidos) audio.tocar('cacerola', 0.7, 1);
   e.unidos = unidos;
   if (jugando) ordenar('poc', { contra: Math.round(e.contra * 100) / 100 }, 200);   // el POC siente la resistencia en su pantalla
+  e.sale = sale;
   if (sale > 0.2) vivos().forEach(c => ordenar('c' + (c.i + 1), { vib: [18] }, 700)); // y el agua llega a la mano de los ciudadanos
+  // el agua golpea los escudos levantados: salpica y suena contra el metal
+  if (sale > 0.15) vivos().forEach(c => { if (c.escudo > 0.5 && Math.random() < dt * 3) audio.tocar('impacto_agua', 0.3 * sale, rnd(1.2, 1.5), c.x / 2); });
   e.apunta = lerp(e.apunta, e.vehX, suave(dt, 4));
   // destello de balizas: doble golpe rojo / azul
   const ciclo = (e.t * 2.2) % 1, dob = ciclo % 0.5, destello = dob < 0.08 || (dob > 0.14 && dob < 0.22);
@@ -701,19 +704,19 @@ function actualizar(dt) {
 
   // ---- audio continuo ----
   if (audio.ctx) {
-    const enCalle = !espera, nv = vivos().length;
+    const enCalle = !espera, nv = vivos().length, na = Math.max(1, e.enJuego || 3);
     audio.ensordecer(e.agua * 0.9);
     audio.nivel('motor', enCalle ? 0.3 + e.agua * 0.25 : 0.1, 0.85 + e.agua * 0.35);
     audio.nivel('sirena', e.balizas * (enCalle ? 0.38 : 0.12), 0.75 + e.fuerza * 0.7);
     audio.nivel('chorro', e.agua * 0.95);
     if (audio.filtroChorro) audio.filtroChorro.frequency.setTargetAtTime(400 + e.agua * 8000, audio.ctx.currentTime, 0.05);
-    audio.nivel('latido', jugando && nv === 1 ? 0.75 : 0);           // queda una sola persona: se oye su cuerpo
+    audio.nivel('latido', jugando && nv === 1 && na > 1 ? 0.75 : 0);           // queda una sola persona: se oye su cuerpo
     // pasos de carrera: bucle mientras corren; más gente, más fuerte; más velocidad, más rápido
-    audio.nivel('pasos', jugando ? 0.25 + 0.35 * (nv / 3) : 0, 0.85 + e.vel / 40);
+    audio.nivel('pasos', jugando ? 0.25 + 0.35 * (nv / na) : 0, 0.85 + e.vel / 40);
     // la calle (sonido de protesta) es la voz colectiva: suena desde que empieza la partida, baja con cada detención
-    // y sube cuando las palmas empujan el agua. El agua la apaga (filtro del mundo).
+    // y sube cuando los escudos bloquean el agua. El agua la apaga (filtro del mundo).
     const enPartida = e.fase === 'placa' || e.fase === 'juego' || (e.fase === 'resultado' && !e.pausa);
-    const voz = jugando ? 0.4 + 0.6 * (nv / 3) + e.contra * 0.3 : 1;
+    const voz = jugando ? 0.4 + 0.6 * (nv / na) + e.contra * 0.3 : 1;
     audio.nivel('protesta', enPartida ? clamp(CONFIG.volumenProtesta * voz) : 0);
     audio.nivel('fuego', (enCalle && niv.ambiente === 'fuego') ? 0.35 : 0);
     audio.nivel('dron', e.fase === 'cine' ? 0.5 : (enCalle && niv.ambiente === 'dron') ? 0.55 : 0);
@@ -1330,6 +1333,21 @@ function corredor(g, c, t) {
   g.fillStyle = c.color;
   g.beginPath(); g.moveTo(nudo.x - s * 0.13, nudo.y - s * 0.02); g.lineTo(nudo.x + s * 0.13, nudo.y - s * 0.02); g.lineTo(nudo.x, nudo.y + s * 0.07); g.closePath(); g.fill();
   for (const lado of [-1, 1]) { const p1 = P2(lado * 0.02, hombro + 0.05), p2 = P2(lado * (0.12 + fl), hombro - 0.12 + fl * lado), p3 = P2(lado * 0.05, hombro - 0.1); g.beginPath(); g.moveTo(p1.x, p1.y); g.lineTo(p2.x, p2.y); g.lineTo(p3.x, p3.y); g.fill(); }
+  // escudo: lo sostiene sobre la espalda y la cabeza, de cara al carro (la cámara). Sube desde abajo al levantarlo.
+  if (c.escudo > 0.03) {
+    const k = c.escudo, w = s * 0.62, h = s * 0.82 * k, cx = x, cy = P2(0, hombro - 0.38 + 0.55 * k).y, r = s * 0.08;
+    g.save(); g.globalAlpha = alfa * Math.min(1, k * 1.4);
+    g.fillStyle = '#23252f'; g.strokeStyle = c.color; g.lineWidth = Math.max(2, s * 0.05);
+    g.beginPath(); g.roundRect ? g.roundRect(cx - w / 2, cy - h / 2, w, h, r) : g.rect(cx - w / 2, cy - h / 2, w, h); g.fill(); g.stroke();
+    // marca pintada a mano: franja y círculo del color del jugador, como los escudos de cartón y lata de la calle
+    g.fillStyle = c.color; g.globalAlpha *= 0.85;
+    g.fillRect(cx - w * 0.38, cy - h * 0.06, w * 0.76, h * 0.12);
+    g.beginPath(); g.arc(cx, cy - h * 0.26, Math.min(w, h) * 0.13, 0, 7); g.fill();
+    // el agua revienta contra el borde de arriba
+    if ((e.sale || 0) > 0.1 && e.fase === 'juego') { g.fillStyle = 'rgba(225,238,255,.8)'; g.globalAlpha = alfa;
+      for (let i = 0; i < 6 * e.sale; i++) { const px = cx + rnd(-w / 2, w / 2), py = cy - h / 2 - rnd(0, s * 0.25); g.beginPath(); g.arc(px, py, rnd(1, 3) * (s / 80), 0, 7); g.fill(); } }
+    g.restore();
+  }
   // nombre sobre la cabeza
   if (estado.fase !== 'inicio' && estado.fase !== 'cine') {
     const ty = cab.y - s * 0.32, fs = Math.max(11, s * 0.14);
@@ -1393,18 +1411,6 @@ function niebla(g, t, niv) {
     const r = W * 0.25, rg = g.createRadialGradient(x, y, 0, x, y, r); rg.addColorStop(0, `rgba(60,62,72,${0.35 * k})`); rg.addColorStop(1, 'rgba(60,62,72,0)'); g.fillStyle = rg; g.fillRect(x - r, y - r, r * 2, r * 2); }
 }
 
-// una palma abierta apoyada en el vidrio (vista desde el otro lado)
-function mano(g, x, y, s, color, alfa) {
-  g.save(); g.translate(x, y); g.globalAlpha = clamp(alfa); g.fillStyle = color; g.strokeStyle = 'rgba(239,233,220,.55)'; g.lineWidth = 2;
-  const forma = () => {
-    g.beginPath(); g.ellipse(0, 0, s * 0.42, s * 0.48, 0, 0, 7);
-    for (const [fx, fy, r, l] of [[-0.3, -0.72, -0.16, 0.26], [-0.1, -0.84, -0.05, 0.3], [0.11, -0.82, 0.05, 0.29], [0.3, -0.68, 0.17, 0.24]]) { g.moveTo(fx * s + s * 0.09, fy * s); g.ellipse(fx * s, fy * s, s * 0.09, s * l, r, 0, 7); }
-    g.moveTo(-0.46 * s, 0); g.ellipse(-0.5 * s, -0.08 * s, s * 0.09, s * 0.24, -0.85, 0, 7);
-  };
-  forma(); g.fill(); g.globalAlpha = clamp(alfa * 0.8); forma(); g.stroke();
-  g.restore();
-}
-
 // copia chica de la escena para el desenfoque del agua, y una gota pintada una sola vez
 const borroso = document.createElement('canvas'), bg = borroso.getContext('2d');
 const gota = document.createElement('canvas'); gota.width = gota.height = 64;
@@ -1465,12 +1471,6 @@ function dibujar(t) {
     }
     ctx.globalAlpha = 1; ctx.stroke(); ctx.restore();
   }
-  // 3b) palmas sobre el vidrio: la mano de cada ciudadano que empuja, en su color, bajo su cuerpo
-  if (e.fase === 'juego') for (const c of corredores) {
-    if (!c.vivo || c.palma < 0.04) continue;
-    const s = H * 0.11 * (0.7 + c.palma * 0.5), x = P(c.x, 0, ZJ).x;
-    mano(ctx, x, H - s * 0.55, s, c.color, 0.18 + c.palma * 0.42 + (e.agua > 0.05 ? Math.sin(t * 18 + c.i) * 0.06 : 0));
-  }
   if (a > 0.05) { ctx.strokeStyle = `rgba(210,225,255,${0.2 * a})`; ctx.lineWidth = 1; ctx.beginPath(); for (let i = 0; i < 45 * a; i++) { const x = Math.random() * W, y = Math.random() * H; ctx.moveTo(x, y); ctx.lineTo(x - 6, y + 40); } ctx.stroke(); }
   // 4) luces cegadoras: rojo y azul inundan la pantalla
   if (e.balizas > 0.03) {
@@ -1485,7 +1485,7 @@ function dibujar(t) {
   // 5) estática
   if (e.ruido > 0.05) { ctx.save(); ctx.globalAlpha = e.ruido * 0.35; ctx.globalCompositeOperation = 'overlay'; ctx.fillStyle = ctx.createPattern(grano, 'repeat'); ctx.translate(rnd(0, 192), rnd(0, 192)); ctx.fillRect(-192, -192, W + 384, H + 384); ctx.restore(); }
   // 6) queda una sola persona: el borde late en su color
-  if (e.fase === 'juego' && vs.length === 1) { ctx.strokeStyle = vs[0].color; ctx.globalAlpha = 0.35 + 0.3 * Math.sin(t * 7.5); ctx.lineWidth = 14; ctx.strokeRect(0, 0, W, H); ctx.globalAlpha = 1; }
+  if (e.fase === 'juego' && vs.length === 1 && (e.enJuego || 3) > 1) { ctx.strokeStyle = vs[0].color; ctx.globalAlpha = 0.35 + 0.3 * Math.sin(t * 7.5); ctx.lineWidth = 14; ctx.strokeRect(0, 0, W, H); ctx.globalAlpha = 1; }
   // 7) cinemática: la escena queda en penumbra detrás del texto
   if (e.fase === 'cine') { ctx.fillStyle = 'rgba(7,8,13,.62)'; ctx.fillRect(0, 0, W, H); }
 }
