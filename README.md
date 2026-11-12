@@ -113,6 +113,8 @@ El tono es tragicómico: los textos son directos y a veces irónicos, pero nunca
 
 Mientras más escudos estén arriba al mismo tiempo, menos agua llega a la pantalla. Un escudo solo ayuda poco, cuando todos los ciudadanos levantan el suyo, el chorro casi desaparece. El agua sale **solo soplando**: ningún otro gesto la activa, y si el teléfono del POC no tiene el micrófono activado, no sale agua.
 
+[Video funcionando](https://www.youtube.com/shorts/ao0koHEX0Ic)
+
 ### Cómo se conecta el teléfono por MQTT
 
 1. La pantalla abre una **sala** (código aleatorio de 6 letras) y muestra **un QR** con `control.html?sala=…`.
@@ -220,5 +222,5 @@ El olor del gas, el ardor en los ojos, el peso del agua en la ropa, el frío. La
 
 - Concepto, diseño, código del juego, control y sonidos sintetizados: [isidoraalvarez](https://github.com/isidoraalvarez) y [dayanapanitrur](https://github.com/dayanapanitrur).
 - Base técnica: [Tacto](https://github.com/fefeliperoar/tacto), de fefeliperoar (`tacto.js`, `server.js`, `vendor/mqtt.min.js`).
-- Sonidos externos: [Ver tabla de sonidos]([####-sonidos-externos-autoría-y-licencia](https://github.com/isidoraalvarez/contrapresion/blob/main/README.md#sonidos-externos-autor%C3%ADa-y-licencia)).
+- Sonidos externos: [Ver tabla de sonidos]([####-sonidos-externos-autoría-y-licencia](#sonidos-externos-autor%C3%ADa-y-licencia)).
 - El POC es una institución ficticia. Los textos de carteles, muros y cinemática se configuran en `CONFIG` (`script.js`).
