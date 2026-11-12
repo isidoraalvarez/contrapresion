@@ -241,6 +241,11 @@ const ARCHIVO = {
 };                                                           // el resto: sonidos/<nombre>.wav
 // los sonidos largos se cortan al usarlos como golpe (segundos): la cacerola trae varios golpes, se usa uno
 const DURACION = { cacerola: 0.75, silbato: 1.1 };
+// ganancia por sonido: los archivos externos vienen grabados mucho más bajos que los sintetizados
+// (medido: multitud −24 dB, cacerola −24,5 dB, pasos −39 dB de volumen promedio, contra −12 dB del motor).
+// Se suben para que la calle, la sirena y el cacerolazo se escuchen claros.
+const GANANCIA = { protesta: 3.2, cacerola: 2.8, sirena: 2.2, pasos: 4, fuego: 1.8, valla: 1.5, motor: 0.7 };
+const ganancia = n => GANANCIA[n] || 1;
 const rutaSonido = n => `sonidos/${encodeURIComponent(ARCHIVO[n] || n + '.wav')}`;
 const DEL_POC = new Set(['sirena', 'chorro', 'impacto_agua']); // suenan encima de todo; el resto ("el mundo") se apaga bajo el agua
 const audio = {
@@ -256,7 +261,10 @@ const audio = {
     if (this.ctx) { this.ctx.resume(); return; }
     const C = window.AudioContext || window.webkitAudioContext; if (!C) return;
     const ctx = (this.ctx = new C());
-    const comp = ctx.createDynamicsCompressor(); comp.connect(ctx.destination);
+    // compresor + ganancia final: todo suena más fuerte sin saturar (el compresor aplana los picos y la ganancia sube el resto)
+    const comp = ctx.createDynamicsCompressor();
+    comp.threshold.value = -20; comp.knee.value = 8; comp.ratio.value = 6; comp.attack.value = 0.005; comp.release.value = 0.2;
+    const fuerte = ctx.createGain(); fuerte.gain.value = 2.2; comp.connect(fuerte); fuerte.connect(ctx.destination);
     this.salida = ctx.createGain(); this.salida.gain.value = this.mudo ? 0 : 0.9 * this.volumen; this.salida.connect(comp);
     this.mundo = ctx.createBiquadFilter(); this.mundo.type = 'lowpass'; this.mundo.frequency.value = 18000; this.mundo.connect(this.salida);
     await Promise.all(SONIDOS.map(async n => {
@@ -283,11 +291,13 @@ const audio = {
   },
   nivel(n, v, rate) {
     const b = this.bucles[n]; if (!b) return;
+    v *= ganancia(n);
     if (b.elem) { const k = DEL_POC.has(n) ? 1 : 1 - this.sordera * 0.75; b.elem.volume = this.mudo ? 0 : clamp(v * k * this.volumen); if (rate) b.elem.playbackRate = clamp(rate, 0.5, 2); return; }
     const t = this.ctx.currentTime; b.g.gain.setTargetAtTime(v, t, 0.06); if (rate) b.src.playbackRate.setTargetAtTime(rate, t, 0.08);
   },
   tocar(n, vol = 1, rate = 1, pan = 0) {
     if (!this.ctx) return;
+    vol *= ganancia(n);
     if (this.modoElem) {
       if (this.mudo || !this.el[n]) return;
       const a = this.el[n].cloneNode(); a.preservesPitch = false; a.volume = clamp(vol * 0.9 * this.volumen * (DEL_POC.has(n) ? 1 : 1 - this.sordera * 0.75)); a.playbackRate = clamp(rate, 0.5, 2); a.play().catch(() => {});
