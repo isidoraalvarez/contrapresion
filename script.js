@@ -232,13 +232,9 @@ btnSaltar.addEventListener('pointerdown', e => { btnSaltar.setPointerCapture(e.p
 // ============================ 4. AUDIO ============================
 const SONIDOS = ['pasos', 'salto', 'carril', 'sirena', 'chorro', 'impacto_agua', 'motor', 'valla', 'cacerola', 'silbato', 'detenido', 'latido', 'fuego', 'dron', 'protesta'];
 const BUCLES = ['motor', 'sirena', 'chorro', 'latido', 'fuego', 'dron', 'protesta', 'pasos', 'cacerolazo'];
-// sonidos de Freesound / BigSoundBank (ver README: autoría y licencia). Se dejan con su nombre original para el crédito.
-const ARCHIVO = {
-  protesta: '485621__inspectorj__protesting-crowd-climate-strike-guildford-01-01.wav',   // la calle: multitud protestando
-  silbato: '78508__joedeshon__referee_whistle_01.wav',
-  cacerola: 'METLImpt_Casserole 1 (ID 2956)_BigSoundBank.com.wav',
-  pasos: 'freesound_community-180904-woodland04-run-steps-skip-jump-clip-47486.mp3',   // carrera (bucle)
-};                                                           // el resto: sonidos/<nombre>.wav
+// todos los archivos se llaman como el sonido (sonidos/<nombre>.wav); la autoría de los externos está en el README.
+// protesta.wav y cacerola.wav se pasaron de 24 a 16 bits: algunos navegadores no reproducían los de 24 bits.
+const ARCHIVO = { pasos: 'pasos.mp3' };                     // el único que no es .wav
 // los sonidos largos se cortan al usarlos como golpe (segundos): la cacerola trae varios golpes, se usa uno
 const DURACION = { cacerola: 1.2, silbato: 1.1 };
 // ganancia por sonido: los archivos externos vienen grabados mucho más bajos que los sintetizados
@@ -284,6 +280,13 @@ const audio = {
       } catch (e) { console.warn('No se pudo cargar', rutaSonido(n), e && e.message); /* abierto como archivo: se usa el respaldo */ }
     }));
     if (!Object.keys(this.buf).length) { this.elementos(); return; }
+    // si falta algún sonido (por ejemplo, no se subió a GitHub), se avisa en pantalla con el nombre del archivo
+    const faltan = SONIDOS.filter(n => !this.buf[n]).map(n => ARCHIVO[n] || n + '.wav');
+    if (faltan.length) {
+      const el = document.createElement('div'); el.id = 'avisoSonido'; el.setAttribute('role', 'alert');
+      el.textContent = `No se pudieron cargar estos sonidos: ${faltan.join(', ')}. Revisa que estén en la carpeta sonidos/ (también en GitHub).`;
+      document.body.appendChild(el); setTimeout(() => el.remove(), 15000);
+    }
   },
   // abierto con doble clic (file://) el navegador no deja leer los .wav con fetch: se usan etiquetas <audio>
   elementos() {
@@ -756,7 +759,7 @@ function actualizar(dt) {
     // antes de la partida (inicio, historia y sala) la calle suena de fondo, más suave y sin cortes
     audio.nivel('protesta', enPartida ? clamp(CONFIG.volumenProtesta * voz) : CONFIG.volumenProtesta * 0.8);
     // cacerolazo de fondo: siempre, más presente en la carrera; baja con cada persona fuera, como la voz de la calle
-    audio.nivel('cacerolazo', enPartida ? 0.3 * clamp(voz) : 0.22);
+    audio.nivel('cacerolazo', enPartida ? 0.5 * clamp(voz) : 0.3);   // junto a la protesta durante toda la carrera
     audio.nivel('fuego', (enCalle && niv.ambiente === 'fuego') ? 0.35 : 0);
     audio.nivel('dron', e.fase === 'cine' ? 0.5 : (enCalle && niv.ambiente === 'dron') ? 0.55 : 0);
   }
