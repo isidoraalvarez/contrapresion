@@ -220,5 +220,5 @@ El olor del gas, el ardor en los ojos, el peso del agua en la ropa, el frío. La
 
 - Concepto, diseño, código del juego, control y sonidos sintetizados: [isidoraalvarez](https://github.com/isidoraalvarez) y [dayanapanitrur](https://github.com/dayanapanitrur).
 - Base técnica: [Tacto](https://github.com/fefeliperoar/tacto), de fefeliperoar (`tacto.js`, `server.js`, `vendor/mqtt.min.js`).
-- Sonidos externos: ver la tabla de sonidos.
+- Sonidos externos: [Ver tabla de sonidos](####-sonidos-externos-autoría-y-licencia).
 - El POC es una institución ficticia. Los textos de carteles, muros y cinemática se configuran en `CONFIG` (`script.js`).
