@@ -1,23 +1,26 @@
 # CONTRAPRESIÓN
 
-**Tres personas corren por la Alameda. Una cuarta, desde un carro lanzaaguas, sopla y el agua cae sobre la pantalla de todas. Solo con los tres escudos arriba se la puede detener.**
-
-De 2 a 4 teléfonos y una pantalla compartida, conectados por MQTT. Se juega solo con el teléfono.
+Contrapresión es un juego situado en la web, que ocupa el teléfono como mando para controlar ciertas funciones dentro de este.
+Este **requiere** de **2 a 4 teléfonos** y una **pantalla compartida**, conectados por **MQTT**. Los controles funcionan solo con el teléfono, no se puede controlar desde el mismo teclado del computador o pantalla.
 
 **Integrantes:**
 
 - Isidora Alvarez: (https://github.com/isidoraalvarez)
 - Dayana Pañitur: (https://github.com/dayanapanitrur)
 
-- **Repositorio:** https://github.com/isidoraalvarez/contrapresion
-
 ---
 
 ## 1. Concepto
 
-Santiago de Chile, desde el 18 de octubre de 2019. *Contrapresión* es una carrera colectiva de resistencia: **de uno a tres ciudadanos** avanzan juntos por la Alameda mientras **otro jugador** maneja un carro lanzaaguas del **POC** (Policía del Orden de Chile, una institución **ficticia**). La ciudad cambia en tres niveles: del estallido de 2019 al toque de queda de la pandemia, y de ahí a una Alameda limpia, llena de vallas y carteles que dicen "ORDEN" y "TODO VA A ESTAR BIEN".
+Una historia que transcurre en Chile, desde el 18 de octubre de 2019 hasta la actualidad. *Contrapresión* abarca los acontecimientos y la resistencia nacida en el estallido social de 2019. Lo que fue impulsado inicialmente por el alza de 30 pesos en la tarifa del Metro de Santiago pero que cargaba con una frustración mucho más profunda que provenía de décadas y con ello aparece la expresión que ya conocemos: "no son 30 pesos, son 30 años". 
 
-**La ironía.** En 2019 el país salió a la calle a pedir una vida digna. Unos años después, ese mismo país votó por "el orden": hoy sube la bencina, se recortan beneficios sociales y los carteles prometen que todo va a estar bien. En medio de ese giro, nuestros tres personajes corren por la Alameda perseguidos por un carro lanzaaguas. ¿Qué hicieron? Mandaron un meme burlándose del gobierno. No es el crimen del siglo, pero igual viene el agua detrás. Quisimos contarlo desde lo tragicómico: no como un drama solemne, sino desde lo absurdo de pasar de una revuelta por mejores condiciones de vida a ser perseguidos por un chiste.
+En lo que ha pasado dentro de estos 7 años hasta la actualidad del año 2026, la historia ha dado un giro profundamente irónico. La lucha que prometía reescribir las reglas del país, terminó disolviéndose en un péndulo político que llevó a Chile a un extremo opuesto, llegando finalmente a validar un sistema y administraciones con ideologías que ofrecen condiciones que son las mismas prácticas o peores por las que alguna vez se reclamó en las calles.
+
+El concepto busca abordar la premisa de lo absurdo de este mismo acontecimiento, en el que el país actualmente opta por una contrariedad, alejándose del motivo a exigir mejores condiciones sociales, de salud y de educación, terminando por avalar "el orden".
+
+Hoy sube la bencina, se recortan beneficios sociales, recortes en la salud y los carteles prometen una frase: "todo va a estar bien". En medio de ese giro, nuestros tres personajes corren por la Alameda perseguidos por un carro lanzaaguas, o también conocido por *"Guanaco"*. ¿Qué hicieron? Mandaron un meme burlándose del gobierno. No es el crimen del siglo, pero igual viene el agua detrás. Quisimos contarlo desde lo tragicómico siguiendo esta idea de lo absurdo, de pasar de una revuelta por mejores condiciones de vida a ser perseguidos por una broma.
+
+*Contrapresión* transforma esta premisa en un juego, el cuál es una carrera colectiva de resistencia: **de uno a tres ciudadanos** avanzan juntos por la Alameda mientras **otro jugador** maneja un carro lanzaaguas del **POC** (Policía del Orden de Chile, una institución **ficticia** por obvias razones legales). La ciudad cambia en tres niveles: del estallido de 2019 al toque de queda de la pandemia, y de ahí a una Alameda limpia, llena de vallas y carteles que dicen "ORDEN" y "TODO VA A ESTAR BIEN".
 
 ### La relación entre tocar, ver y oír
 
