@@ -83,7 +83,11 @@ const CONFIG = {
     { s: 6, fecha: 'Metro de Santiago', texto: 'El pasaje sube 30 pesos.', nota: 'Estudiantes secundarios saltan los torniquetes. En los muros aparece una palabra: EVADE.' },
     { s: 6.5, fecha: '25 de octubre de 2019', texto: 'Más de un millón de personas en la calle.', nota: 'Una de las marchas más grandes de la historia de Chile. En los carteles se lee: «No son 30 pesos, son 30 años».' },
     { s: 6, fecha: 'Plaza Italia → Plaza Dignidad', texto: 'La plaza cambia de nombre.', nota: 'Cada tarde llegan el agua, el gas y las luces. El carro lanzaaguas se vuelve parte del paisaje.' },
-    { s: 6.5, fecha: 'Ahora', texto: 'Tres personas corren por la Alameda.', nota: 'Detrás viene el agua. Si una cae, las otras siguen. Mientras una llegue, la voz sigue viva.' },
+    // la ironía: de la revuelta por una vida digna al voto por "el orden", y lo que vino después
+    { s: 6.5, fecha: 'Unos años después', texto: 'El país que salió a pedir dignidad votó por el orden.', nota: 'Vueltas que da la vida. Los muros se pintaron de gris.' },
+    { s: 6, fecha: 'Hoy', texto: 'Sube la bencina. Se recortan los beneficios.', nota: 'Todo va a estar bien. Eso dicen los carteles.' },
+    { s: 6, fecha: 'Ahora', texto: 'Tres personas corren por la Alameda.', nota: '¿Qué hicieron? Mandaron un meme burlándose del gobierno.' },
+    { s: 6.5, fecha: 'Ahora', texto: 'No es el crimen del siglo.', nota: 'Igual viene el agua detrás. Si una cae, las otras siguen. Mientras una llegue, la voz sigue viva.' },
     { s: 4, titulo: true },
   ],
 };
