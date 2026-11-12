@@ -15,7 +15,7 @@ const r3 = v => Math.round(v * 1000) / 1000;
 const Q = new URLSearchParams(location.search);
 const ES_CIUDADANO = r => r === 'c1' || r === 'c2' || r === 'c3';
 const NOMBRE_ROL = { c1: 'Ciudadano 1', c2: 'Ciudadano 2', c3: 'Ciudadano 3', poc: 'POC' };
-const VERSION = '11-11 soplo6';   // se ve arriba a la derecha del teléfono: confirma que el teléfono cargó la versión nueva
+const VERSION = '11-11 giro7';   // se ve arriba a la derecha del teléfono: confirma que el teléfono cargó la versión nueva
 
 // ---------- entrada ----------
 // El puesto no se elige: lo sortea la pantalla y llega por …/cmd {rol}. Se recuerda por sala, para no perderlo al recargar.
@@ -23,7 +23,7 @@ let rol = '';
 $('#sala').value = Tacto.clean(Q.get('sala')) || Tacto.clean(ls('tacto.sala')) || '';
 $('#nombre').value = ls('cp.nombre') || '';
 const GUIA = {
-  ciudadano: [['Inclina', 'el teléfono a un lado: cambias de calle'], ['Tira', 'el teléfono hacia arriba: saltas (o doble toque)'], ['Desliza', 'un dedo de arriba hacia abajo: te agachas bajo lo que cuelga'], ['Escudo', 'apoya 3 dedos: bloqueas el agua. Los tres escudos juntos la detienen']],
+  ciudadano: [['Inclina', 'el teléfono a un lado: cambias de calle'], ['Tira', 'el teléfono hacia arriba: saltas (o doble toque)'], ['Desliza', 'un dedo de arriba hacia abajo: te agachas bajo lo que cuelga'], ['Escudo', 'apoya 2 dedos: bloqueas el agua. Los escudos juntos la detienen']],
   poc: [['Sopla', 'al micrófono: sale el agua. Más fuerte, más agua'], ['Apunta', 'con el dedo: el agua cae donde tocas'], ['Toca', 'para encender balizas y sirena'], ['Agita', 'el teléfono: llena el estanque. Vacío, no sale agua']],
 };
 function recibirRol(r) {
@@ -263,10 +263,25 @@ const TIRON = 7;               // m/s² de aceleración lineal para saltar
 const VERTICAL_MIN = 0.75;     // qué parte del movimiento tiene que ser vertical (0–1)
 const ROTACION_MAX = 250;      // °/s: si el teléfono está girando más rápido que esto, es inclinar, no tirar
 let grav = null, angCalle = [0, 0, 0], ultimoFuerte = 0;
+// INCLINACIÓN LATERAL igual en todos los teléfonos. Antes se usaba gamma tal cual, y gamma se da vuelta cuando el
+// teléfono pasa de vertical (beta > 90°) o cuando la pantalla está girada: en algunos teléfonos inclinar a la derecha
+// iba a la izquierda. Ahora se calcula hacia dónde cae la gravedad en el plano de la PANTALLA:
+//   gravedad en el teléfono = (cos β · sen γ, −sen β, −cos β · cos γ)  →  componente hacia la derecha de la pantalla
+// y se corrige por el giro de la pantalla (vertical, apaisado, al revés). Positivo = inclinado a la derecha.
+function inclinacionLateral(betaDeg, gammaDeg) {
+  const r = Math.PI / 180, b = betaDeg * r, g = gammaDeg * r;
+  const gx = Math.cos(b) * Math.sin(g), gy = -Math.sin(b);
+  const giro = ((screen.orientation && screen.orientation.angle) ?? window.orientation ?? 0) * r;
+  const lateral = gx * Math.cos(giro) - gy * Math.sin(giro);
+  return Math.asin(clamp(lateral, -1, 1)) / r;
+}
+// el juego se pensó en vertical: si el teléfono está apaisado, se avisa
+function revisarVertical() { if (ES_CIUDADANO(rol) || rol === 'poc') { const apaisado = innerWidth > innerHeight; if (apaisado) $('#aviso').textContent = 'Usa el teléfono en vertical.'; else if ($('#aviso').textContent === 'Usa el teléfono en vertical.') $('#aviso').textContent = ''; } }
+addEventListener('resize', revisarVertical);
 function ligarMovimiento() {
   if (ligado) return; ligado = true;
   addEventListener('deviceorientation', e => {
-    ang = [e.alpha || 0, e.beta || 0, e.gamma || 0]; sucio = true;
+    ang = [e.alpha || 0, e.beta || 0, inclinacionLateral(e.beta || 0, e.gamma || 0)]; sucio = true;
     const ahora = performance.now();
     // ángulo para la calle: se congela durante un tirón y justo después de saltar
     if (ahora - ultimoFuerte > 350 && ahora - ultimoSalto > 600) angCalle = [...ang];
@@ -307,7 +322,7 @@ function dibujar() {
   g.clearRect(0, 0, W, H);
   const gam = clamp(ang[2] / 40, -1, 1), col = color();
   if (ES_CIUDADANO(rol)) {
-    const carril = ang[2] < -18 ? 0 : ang[2] > 18 ? 2 : 1;   // mismo umbral que la pantalla (CONFIG.inclinacionCarril)
+    const carril = ang[2] < -14 ? 0 : ang[2] > 14 ? 2 : 1;   // mismo umbral que la pantalla (CONFIG.inclinacionCarril)
     for (let i = 0; i < 3; i++) { g.globalAlpha = i === carril ? 0.25 : 0.05; g.fillStyle = i === carril ? col : '#efe9dc'; g.fillRect(i * W / 3 + 3, H * 0.45, W / 3 - 6, H * 0.55); }
     g.globalAlpha = 1; g.strokeStyle = 'rgba(239,233,220,.35)'; g.setLineDash([10, 12]);
     for (let i = 1; i < 3; i++) { g.beginPath(); g.moveTo(i * W / 3, H * 0.45); g.lineTo(i * W / 3, H); g.stroke(); } g.setLineDash([]);
@@ -315,8 +330,8 @@ function dibujar() {
     if (baja > 0.05) { g.globalAlpha = baja; g.fillStyle = '#efe9dc'; g.font = '900 28px "Big Shoulders Stencil Display", Impact, sans-serif'; g.textAlign = 'center'; g.fillText('↓ AGACHADO', W / 2, H * 0.22); g.globalAlpha = 1; }
     baja *= 0.95;
     for (const z of cur.p) { g.fillStyle = 'rgba(239,233,220,.12)'; g.beginPath(); g.arc(z.x * W, z.y * H, 40 + z.d, 0, 7); g.fill(); }
-    // escudo: con exactamente 3 dedos (mismo valor que CONFIG.dedosEscudo en la pantalla) se levanta y se ve aquí
-    const DEDOS_ESCUDO = 3, arriba = cur.n === DEDOS_ESCUDO;
+    // escudo: con exactamente 2 dedos (mismo valor que CONFIG.dedosEscudo en la pantalla) se levanta y se ve aquí
+    const DEDOS_ESCUDO = 2, arriba = cur.n === DEDOS_ESCUDO;
     if (arriba) {
       const w = W * 0.5, h = H * 0.36, x0 = W / 2 - w / 2, y0 = H * 0.5;
       g.fillStyle = '#23252f'; g.strokeStyle = col; g.lineWidth = 6;
