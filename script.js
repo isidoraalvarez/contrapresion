@@ -2,7 +2,7 @@
  *
  * Cuatro teléfonos por MQTT (librería tacto.js):
  *   CIUDADANOS 1·2·3   inclinación (ang.g) → calle · tirón (evento salto) → salto
- *                      3 dedos (touch.n) → levanta el ESCUDO, que bloquea el agua (contrapresión)
+ *                      2 dedos (touch.n) → levanta el ESCUDO, que bloquea el agua (contrapresión)
  *                      deslizar un dedo hacia abajo (evento agacharse) → se agacha bajo lo que cuelga
  *   POC                posición del dedo (touch.x) → dónde cae el agua · inclinación (ang.g) → carro, si no toca
  *                      toque (touch.down) → balizas y sirena · SOPLO al micrófono (mic.level) → agua (único gesto del agua)
@@ -29,15 +29,15 @@ const CONFIG = {
   // Ej: 'https://usuario.github.io/contrapresion/'. Si queda vacía, los QR usan la dirección de esta página.
   urlPublica: 'https://isidoraalvarez.github.io/contrapresion/',
   anchoCarril: 1.25,          // metros
-  inclinacionCarril: 18,      // grados de ang.g para cambiar de calle (más alto = hay que inclinar más)
-  histeresis: 6,              // margen para volver al centro (evita que tiemble entre dos calles)
+  inclinacionCarril: 14,      // grados de inclinación lateral (ang.g, ya corregida en el teléfono) para cambiar de calle
+  histeresis: 5,             // margen para volver al centro (evita que tiemble entre dos calles)
   suavizadoGiro: 7,           // qué tan rápido sigue al giro (más bajo = más calmado, más lento)
   pausaCarril: 0.28,          // segundos sin poder cambiar de calle tras un cambio
   pausaSalto: 0.5,            // segundos sin cambiar de calle tras un salto (el tirón mueve el teléfono)
   inclinacionCarro: 35,       // grados de ang.g para llevar el carro al borde
   umbralSoplo: 0.12,          // soplo mínimo (0–1) para que salga agua. Más bajo = basta un soplo suave
   contrapresion: 0.9,         // cuánta agua bloquean los tres escudos juntos (0–1). Un escudo bloquea un tercio de eso
-  dedosEscudo: 3,             // dedos apoyados (exactamente) para levantar el escudo
+  dedosEscudo: 2,             // dedos apoyados (exactamente) para levantar el escudo
   duracionAgachado: 0.9,      // segundos que queda agachado tras deslizar un dedo hacia abajo
   volumenProtesta: 0.85,      // volumen de la multitud protestando (InspectorJ, Freesound), la calle de fondo (0–1)
   llenadoPorSacudida: 0.07,   // cada sacudida del teléfono del POC llena esto del estanque (~15 sacudidas = lleno)
@@ -191,10 +191,10 @@ function fuerzaPOC() {
   const id = jugadores.poc; if (!id || !POCsopla()) return 0;
   return performance.now() - ultimoMic[id] > 600 ? 0 : clamp(canal('poc', 'mic.level') || 0);   // sin noticias recientes: no sale agua
 }
-// escudo: un ciudadano apoya 3 dedos sobre su vidrio → levanta el escudo (0/1).
+// escudo: un ciudadano apoya 2 dedos sobre su vidrio → levanta el escudo (0/1).
 // (La palma entera no sirve: los teléfonos la descartan como toque accidental.)
 function escudoDe(puesto) {
-  return (canal(puesto, 'touch.n') || 0) === CONFIG.dedosEscudo ? 1 : 0;   // exactamente 3: ni 2 ni 4
+  return (canal(puesto, 'touch.n') || 0) === CONFIG.dedosEscudo ? 1 : 0;   // exactamente 2: ni 1 ni 3
 }
 const ultimaOrden = {};
 function ordenar(puesto, msg, cada = 0) { // la pantalla le habla al teléfono: vibración y estado
@@ -381,7 +381,7 @@ function pintarPuestos() {
       <article class="puesto ${k}">
         <h3>${k === 'poc' ? 'POC · lanzaaguas' : 'Ciudadano ' + (i + 1)}</h3>
         <div class="estado" id="est-${k}">libre · no juega</div>
-        <div class="teclas">${k === 'poc' ? 'Policía del Orden de Chile. Sopla para el agua, el dedo apunta, agita para llenar el estanque.' : 'Inclina, tira para saltar, desliza hacia abajo para agacharte, 3 dedos para el escudo.'}</div>
+        <div class="teclas">${k === 'poc' ? 'Policía del Orden de Chile. Sopla para el agua, el dedo apunta, agita para llenar el estanque.' : 'Inclina, tira para saltar, desliza hacia abajo para agacharte, 2 dedos para el escudo.'}</div>
       </article>`).join('');
   }
   PUESTOS.forEach(k => {
@@ -561,7 +561,7 @@ function leerCorredores(dt) {
       if (c.carrilTeclado != null && n === c.carril) n = c.carrilTeclado; else c.carrilTeclado = null;
       cambiarCarril(c, n);
     } else if (c.carrilTeclado != null) cambiarCarril(c, c.carrilTeclado);
-    // escudo: 3 dedos levantan el escudo, que bloquea el agua
+    // escudo: 2 dedos levantan el escudo, que bloquea el agua
     const esc = escudoDe(k);
     if (esc && !c.conEscudo && estado.fase === 'juego' && c.vivo) audio.tocar('valla', 0.45, 1.35, c.x / 3); // el escudo se levanta: golpe metálico
     c.conEscudo = esc > 0;
