@@ -28,8 +28,6 @@ Hoy sube la bencina, se recortan beneficios sociales, recortes en la salud y los
 
 - **Los ciudadanos** deben apoyar **2 dedos** sobre el teléfono, esto levanta un escudo, como los escudos de cartón y lata que la primera línea pintaba en la calle. Cada escudo bloquea una parte del agua, pero solo los tres juntos detienen el chorro. Esa es la contrapresión.
 
-**un soplo borra la vista y la voz de un grupo; solo los escudos juntos lo detienen.**
-
 ### Qué queremos que la persona sienta o descubra
 
 - **La presión de uno se resiste en conjunto.** Cuando los tres escudos están arriba a la vez, la imagen se aclara, la multitud vuelve a oírse fuerte y suena una cacerola. Sostener el escudo ocupa la mano mientras hay que seguir inclinando, saltando y agachándose, resistir juntos es una decisión.
