@@ -11,17 +11,18 @@ De 2 a 4 teléfonos y una pantalla compartida, conectados por MQTT. Se juega sol
 
 - **Repositorio:** https://github.com/isidoraalvarez/contrapresion
 
-
 ---
 
 ## 1. Concepto
 
 Santiago de Chile, desde el 18 de octubre de 2019. *Contrapresión* es una carrera colectiva de resistencia: **de uno a tres ciudadanos** avanzan juntos por la Alameda mientras **otro jugador** maneja un carro lanzaaguas del **POC** (Policía del Orden de Chile, una institución **ficticia**). La ciudad cambia en tres niveles: del estallido de 2019 al toque de queda de la pandemia, y de ahí a una Alameda limpia, llena de vallas y carteles que dicen "ORDEN" y "TODO VA A ESTAR BIEN".
 
+**La ironía.** En 2019 el país salió a la calle a pedir una vida digna. Unos años después, ese mismo país votó por "el orden": hoy sube la bencina, se recortan beneficios sociales y los carteles prometen que todo va a estar bien. En medio de ese giro, nuestros tres personajes corren por la Alameda perseguidos por un carro lanzaaguas. ¿Qué hicieron? Mandaron un meme burlándose del gobierno. No es el crimen del siglo, pero igual viene el agua detrás. Quisimos contarlo desde lo tragicómico: no como un drama solemne, sino desde lo absurdo de pasar de una revuelta por mejores condiciones de vida a ser perseguidos por un chiste.
+
 ### La relación entre tocar, ver y oír
 
 - **El POC sopla.** Su aliento sobre el micrófono es la fuerza del agua. El agua no apunta a una persona, cae sobre **la pantalla compartida**, la desenfoca, la hace ondular, la llena de gotas, aparece sirenas tipicas de color rojo y azul y de un ruido que ensordece todo lo demás. Un gesto mínimo, casi invisible, le quita la vista y la voz a un grupo entero.
-- **Los ciudadanos levantan escudos.** Apoyar **3 dedos** sobre el teléfono levanta un escudo, como los escudos de cartón y lata que la primera línea pintaba en la calle. Cada escudo bloquea una parte del agua, pero **uno solo no alcanza, solo los tres juntos detienen el chorro.** Esa es la contrapresión.
+- **Los ciudadanos levantan escudos.** Apoyar **2 dedos** sobre el teléfono levanta un escudo, como los escudos de cartón y lata que la primera línea pintaba en la calle. Cada escudo bloquea una parte del agua, pero **uno solo no alcanza, solo los tres juntos detienen el chorro.** Esa es la contrapresión.
 
 **un soplo borra la vista y la voz de un grupo; solo los escudos juntos lo detienen.**
 
@@ -29,25 +30,27 @@ Santiago de Chile, desde el 18 de octubre de 2019. *Contrapresión* es una carre
 
 - **La presión de uno se resiste en conjunto.** Cuando los tres escudos están arriba a la vez, la imagen se aclara, la multitud vuelve a oírse fuerte y suena una cacerola. Sostener el escudo ocupa la mano mientras hay que seguir inclinando, saltando y agachándose, resistir juntos es una decisión.
 - **La voz es colectiva.** El sonido de la calle de una multitud protestand, suena mientras haya gente corriendo y baja cada vez que alguien queda fuera. Cuando queda una sola persona, ya no se oye la multitud sino su latido, y el borde de la pantalla late en su color.
-- **Basta con que una llegue, pero no es lo mismo.** El grupo pasa de nivel si al menos una persona llega a la meta, pero gana **una estrella por cada persona que llega** (tantas como ciudadanos haya: con tres, hasta 3 por nivel y 9 en total). El puntaje premia llegar juntos.
+- **Basta con que una llegue, pero no es lo mismo.** El grupo pasa de nivel si al menos una persona llega a la meta, pero gana **una estrella por cada persona que llega** (con tres ciudadanos, hasta 3 por nivel y 9 en total). El puntaje premia llegar juntos. Si juegan solo dos personas (el POC y un ciudadano), llegar a la meta vale siempre las **3 estrellas**.
 - **La luz que ciega es la única que muestra.** En el toque de queda la niebla tapa la calle, los obstáculos solo aparecen con los destellos de las balizas del carro.
-- **Nadie elige su lado.** Los puestos se sortean al entrar, cualquiera puede terminar soplando el agua o empujándola.
+- **Nadie elige su lado.** Los puestos se sortean al entrar, cualquiera puede terminar soplando el agua o levantando un escudo.
 
 ### Cómo se juega
 
-> **Inicio y cinemática.** Unas placas cuentan el contexto: el alza de 30 pesos del Metro, las evasiones, la marcha del 25 de octubre, Plaza Italia que pasa a llamarse Plaza Dignidad. Se puede saltar, pero hay que mantener apretado 3 segundos: saltarse la historia cuesta un esfuerzo.
+> **Inicio y cinemática.** Unas placas cuentan el contexto: el alza de 30 pesos del Metro, las evasiones, la marcha del 25 de octubre, Plaza Italia que pasa a llamarse Plaza Dignidad. Después viene el giro: el país que pidió dignidad votó por el orden, sube la bencina, se recortan beneficios… y tres personas corren por la Alameda por haber mandado un meme burlándose del gobierno. Se puede saltar, pero hay que mantener apretado 3 segundos: saltarse la historia cuesta un esfuerzo.
 
-> **Sala.** Todos escanean **un solo QR** y escriben un **apodo**. La pantalla sortea los puestos: Ciudadano 1, 2, 3 o POC. Se necesitan **al menos 2 teléfonos**: siempre hay un POC y de 1 a 3 ciudadanos. **No se puede jugar de a uno**: el botón para salir a la calle queda bloqueado hasta que entren dos teléfonos. Los puestos sin teléfono no corren.
+> **Sala.** Todos escanean **un solo QR** y escriben un **apodo**. La pantalla sortea los puestos: Ciudadano 1, 2, 3 o POC. Se necesitan **al menos 2 teléfonos**: siempre hay un POC y de 1 a 3 ciudadanos; con dos teléfonos, uno es sí o sí el POC y el otro un ciudadano. **No se puede jugar de a uno**: el botón para salir a la calle queda bloqueado hasta que entren dos teléfonos. Los puestos sin teléfono no corren.
 
 > **Carrera.** Avance automático por tres niveles. Cada ciudadano tiene vida propia. si choca con un obstáculo aparece "¡Alcanzado!" y sale de la ronda, pero los demás siguen.
 
 > **Fin del nivel.** Hay dos maneras de terminar un nivel:
 
-  - **Si al menos un ciudadano llega a la meta**, el grupo gana, aparecen las estrellas (una por cada persona que llegó) y, después de una cuenta regresiva, empieza el nivel siguiente. Los ciudadanos que el agua alcanzó en este nivel vuelven a jugar en el siguiente.
+  - **Si al menos un ciudadano llega a la meta**, el grupo gana, aparecen las estrellas (una por cada persona que llegó, o 3 si juegan solo dos personas) y, después de una cuenta regresiva, empieza el nivel siguiente. Los ciudadanos que el agua alcanzó en este nivel vuelven a jugar en el siguiente.
 
 > **Si el agua alcanza a todos los ciudadanos antes de la meta**, el grupo pierde, aparece "Esta vez no llegaron" y, a los 3 segundos, el juego vuelve a la sala, sortea de nuevo los puestos y la partida empieza otra vez desde el nivel 1.
 
-> **Final.** "Llegaron a La Moneda", con el total de estrellas del recorrido.
+> **Cada teléfono sabe si ganó o perdió**, también el del POC. Cuando los ciudadanos llegan, el POC lee "Perdiste · La revolución siempre ganará." Cuando el agua alcanza a todos, el POC lee "Ganaste" y una pregunta incómoda: "¿Disfrutas oprimiendo la libertad de expresión de la gente?" o "Veo que disfrutas ejercer tu poder." Ganar como POC no es un premio: es quedar frente a lo que se hizo.
+
+> **Final.** "Llegaron a La Moneda", con el total de estrellas del recorrido. A los pocos segundos el juego vuelve solo a la sala y sortea de nuevo los puestos, igual que cuando se pierde: al terminar una partida, ganando o perdiendo, siempre hay un sorteo nuevo.
 
 ### Personajes
 
@@ -65,6 +68,14 @@ Santiago de Chile, desde el 18 de octubre de 2019. *Contrapresión* es una carre
 | 2 · **El Toque de Queda** | Universidad de Chile → Cerro Santa Lucía · 2020, pandemia | 10 → 13,5 m/s · 550 m | valla papal · letrero "TOQUE DE QUEDA 22:00" · cinta "CUARENTENA" | Noche y niebla casi total: solo las balizas muestran lo que viene; cortinas metálicas; "HAMBRE" proyectado en la torre | 2,5 s |
 | 3 · **La Elección** | Alameda → La Moneda | 15 → 20 m/s · 700 m | vallas · carteles "ORDEN" · pasacalles "TODO VA A ESTAR BIEN" | Nublado, muros grises limpios tapizados de afiches, vallas en las veredas; La Moneda crece al fondo | 3 s |
 
+### Estética
+
+La estética sale de la calle misma: rayados con esténcil, afiches fotocopiados, cinta amarilla de valla, luces de baliza. No quisimos una imagen realista ni violenta, sino una ciudad dibujada con formas simples y planas, como un afiche o un cartel de protesta, para que se lea rápido en una pantalla compartida y para que el tema, que es delicado, no se vuelva morboso.
+
+La estética también cuenta la ironía de la historia. En el nivel 1 la calle está llena de color, gente, banderas y frases pintadas; en el nivel 3 todo eso desaparece: muros grises y limpios, vallas ordenadas y carteles azules que repiten "ORDEN" y "TODO VA A ESTAR BIEN". El color se va retirando a medida que avanza el juego, igual que la revuelta fue quedando atrás. El agua hace lo mismo sobre la pantalla: desenfoca, apaga el color y ensordece, es decir, borra lo que la gente estaba diciendo.
+
+El tono es tragicómico: los textos son directos y a veces irónicos, pero nunca crudos ("¡Alcanzado!", "Esta vez no llegaron"), y al POC que gana el juego le pregunta si disfruta ejercer su poder.
+
 ### Gráfica
 
 | Elemento | Decisión | Por qué |
@@ -75,7 +86,8 @@ Santiago de Chile, desde el 18 de octubre de 2019. *Contrapresión* es una carre
 | Color | noche `#07080d`, cal `#efe9dc`, amarillo valla `#ffd400`; ciudadanos `#e8202a` · `#3d8bff` · `#22c16b`; blindado `#2f4a32` | Cada ciudadano lleva su color en toda la interfaz (teléfono, pañoleta, ficha, escudo, sello). Rojo y azul juntos solo aparecen como baliza. En el nivel 3 el color se retira. |
 | Textura | grano permanente y cinta de franjas amarillas | Fotocopia, afiche pegado en la calle, valla papal. |
 | Composición | cámara detrás de los tres, el carro asoma abajo, el destino crece en el horizonte | Quien mira la pantalla queda en el lugar de quien persigue. |
-| Lenguaje | "¡Alcanzado!", "Fuera de esta ronda", "Esta vez no llegaron" |
+| Lenguaje | "¡Alcanzado!", "Fuera de esta ronda", "Esta vez no llegaron" | El tema es real y cercano: se nombra lo que pasa con ironía, pero sin crudeza. |
+
 ---
 
 ## 2. Funcionamiento
@@ -89,15 +101,15 @@ Santiago de Chile, desde el 18 de octubre de 2019. *Contrapresión* es una carre
 | POC | Tocar (o soplar) | `touch.down` | balizas (0–1) | destellos dobles rojo/azul sobre toda la pantalla; en el nivel 2 abren la niebla | `sirena` | encender las luces ya ocupa la vista y el oído de todos |
 | POC | **Agitar** el teléfono | `evento {tipo:'agitar'}` (el teléfono mide la aceleración) | estanque (0–1) | barra del estanque en la pantalla y en el teléfono; vacío, no sale agua | `impacto_agua` grave (agua golpeando dentro); `valla` cuando se vacía; `silbato` cuando se llena | el agua no es infinita: cargarla es un esfuerzo físico, visible para todos |
 | POC | Inclinar (sin tocar) | `ang.g` (±35°) | posición del carro | el carro se mueve con retardo, como un vehículo pesado | `motor` | — |
-| **Ciudadano** | **3 dedos** apoyados | `touch.n` (= 3) | escudo arriba (0/1) y **contrapresión** | el personaje levanta un **escudo** con el borde y la marca de su color; el agua revienta contra él y la pantalla se aclara | golpe metálico al levantarlo (`valla` agudo); agua contra el escudo (`impacto_agua` agudo); la multitud sube; `cacerola` cuando todos los escudos están arriba | tres dedos sostienen el escudo como tres personas; uno solo no alcanza |
+| **Ciudadano** | **2 dedos** apoyados | `touch.n` (= 2) | escudo arriba (0/1) y **contrapresión** | el personaje levanta un **escudo** con el borde y la marca de su color; el agua revienta contra él y la pantalla se aclara | golpe metálico al levantarlo (`valla` agudo); agua contra el escudo (`impacto_agua` agudo); la multitud sube; `cacerola` cuando todos los escudos están arriba | dos dedos sostienen el escudo con firmeza; un escudo solo no alcanza |
 | Ciudadano | **Deslizar un dedo** de arriba hacia abajo | `evento {tipo:'agacharse'}` (el teléfono detecta el deslizamiento vertical) | agachado (0,9 s) | se agacha y se cubre la cabeza: pasa bajo semáforos, cintas y pasacalles | roce de ropa (`carril` grave) | el dedo baja y el cuerpo baja |
-| Ciudadano | Inclinar a un lado | `ang.g` (±18°, suavizado, de a una calle por vez) | calle (3) | el cuerpo cambia de calle; la cámara sigue al grupo | `carril` paneado | esquivar es ladear el cuerpo |
-| Ciudadano | Tirón hacia arriba | `evento {tipo:'salto'}` (aceleración − 9,8 > 7 m/s²); respaldo: doble toque | salto | el cuerpo sube | `salto`; `valla` al pasar sobre un obstáculo | el salto nace de un impulso del brazo |
+| Ciudadano | Inclinar a un lado | `ang.g`: inclinación lateral calculada con la gravedad, igual en todos los teléfonos (±14°, suavizada, de a una calle por vez) | calle (3) | el cuerpo cambia de calle; la cámara sigue al grupo | `carril` paneado | esquivar es ladear el cuerpo |
+| Ciudadano | Tirón hacia arriba | `evento {tipo:'salto'}` (el teléfono separa el tirón de la inclinación: tiene que ser un movimiento fuerte, hacia arriba y sin girar); respaldo: doble toque | salto | el cuerpo sube | `salto`; `valla` al pasar sobre un obstáculo | el salto nace de un impulso del brazo |
 | Ciudadano | (recibe) el agua | `…/cmd {vib}` | — | — | el teléfono vibra cuando sale agua | el agua llega también a la mano |
 | Ciudadano | (recibe) quedar fuera | `…/cmd {estado:'detenido', vib}` | en carrera / fuera | sello "¡Alcanzado!"; el teléfono muestra "Fuera de esta ronda" | `detenido`, `silbato`; la calle baja un tercio | — |
 | Sistema | — | — | personas corriendo | fichas con apodos; estrellas al final | `protesta` = la voz colectiva (sube con los escudos, baja con cada persona fuera); `pasos` en bucle; `latido` cuando queda una; `cacerola` cada 100 m y por cada estrella | la voz colectiva se apaga con cada persona que cae |
 
-Mientras más escudos estén arriba al mismo tiempo, menos agua llega a la pantalla. Un escudo solo ayuda poco, cuando todos los ciudadanos levantan el suyo, el chorro casi desaparece. Si el teléfono del POC no permite usar el micrófono, el agua sale apretando fuerte la pantalla.
+Mientras más escudos estén arriba al mismo tiempo, menos agua llega a la pantalla. Un escudo solo ayuda poco, cuando todos los ciudadanos levantan el suyo, el chorro casi desaparece. El agua sale **solo soplando**: ningún otro gesto la activa, y si el teléfono del POC no tiene el micrófono activado, no sale agua.
 
 ### Cómo se conecta el teléfono por MQTT
 
@@ -162,15 +174,15 @@ Los 10 sonidos sintetizados se generan con "herramientas/sintetizar_sonidos.py" 
 
 | Archivo en `sonidos/` | Sonido original | Autor | Origen | Licencia | Uso en el juego |
 |---|---|---|---|---|---|
-| `485621__inspectorj__protesting-crowd-climate-strike-guildford-01-01.wav` | "Protesting Crowd, Climate Strike, Guildford, 01-01" | InspectorJ | [Freesound](https://freesound.org/people/InspectorJ/sounds/485621/) | [CC0 1.0](http://creativecommons.org/publicdomain/zero/1.0/) | La calle de fondo durante la partida (bucle). Es la voz colectiva: su volumen depende de cuántas personas siguen corriendo y de cuántos escudos están arriba. Sin cambios en el archivo. |
-| `METLImpt_Casserole 1 (ID 2956)_BigSoundBank.com.wav` | "Casserole #1" | Joseph SARDIN | [BigSoundBank](https://bigsoundbank.com/casserole-1-s2956.html) | CC0 (dominio público) | Cacerolazo corto (el juego usa los primeros 0,75 s): cada 100 m, por cada estrella, en la cinemática y cuando todos los escudos están arriba. |
-| `sirena.wav` | "VEHSirn_Police Car Siren.Synthesized.Dry 1_EM.wav" | newlocknew | [Freesound](https://freesound.org/people/newlocknew/sounds/692524/) | [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) | Sirena del carro (bucle) mientras están encendidas las balizas. Renombrado. |
-| `78508__joedeshon__referee_whistle_01.wav` | "referee_whistle_01.wav" | joedeshon | [Freesound](https://freesound.org/people/joedeshon/sounds/78508/) | [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) | Pito al partir, cuando alguien queda fuera y cuando el estanque se llena. Sin cambios. |
-| `freesound_community-180904-woodland04-run-steps-skip-jump-clip-47486.mp3` | "180904-woodland04 run steps skip jump clip" | martian (Freesound), publicado en Pixabay por freesound_community | [Pixabay](https://pixabay.com/sound-effects/film-special-effects-180904-woodland04-run-steps-skip-jump-clip-47486/) | [Pixabay Content License](https://pixabay.com/service/license-summary/) | Pasos de carrera en bucle mientras corren; más fuertes con más gente y más rápidos con más velocidad. Sin cambios. |
+| `protesta.wav` | "Protesting Crowd, Climate Strike, Guildford, 01-01" | InspectorJ | [Freesound](https://freesound.org/people/InspectorJ/sounds/485621/) | [CC0 1.0](http://creativecommons.org/publicdomain/zero/1.0/) | La calle de fondo durante toda la partida (bucle), junto al cacerolazo. Es la voz colectiva: su volumen depende de cuántas personas siguen corriendo y de cuántos escudos están arriba. Renombrado y convertido a 16 bits mono. |
+| `cacerola.wav` | "Casserole #1" | Joseph SARDIN | [BigSoundBank](https://bigsoundbank.com/casserole-1-s2956.html) | CC0 (dominio público) | Cacerolazo de fondo en bucle durante la carrera y golpes de cacerola cada 100 m, por cada estrella, en la cinemática y cuando todos los escudos están arriba. Renombrado y convertido a 16 bits. |
+| `sirena.wav` | "VEHSirn_Police Car Siren.Synthesized.Dry 1_EM.wav" | newlocknew | [Freesound](https://freesound.org/people/newlocknew/sounds/692524/) | [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) | Sirena del carro durante la carrera; sube cuando el POC enciende las balizas. Renombrado. |
+| `silbato.wav` | "referee_whistle_01.wav" | joedeshon | [Freesound](https://freesound.org/people/joedeshon/sounds/78508/) | [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) | Pito al partir, cuando alguien queda fuera y cuando el estanque se llena. Renombrado. |
+| `pasos.mp3` | "180904-woodland04 run steps skip jump clip" | martian (Freesound), publicado en Pixabay por freesound_community | [Pixabay](https://pixabay.com/sound-effects/film-special-effects-180904-woodland04-run-steps-skip-jump-clip-47486/) | [Pixabay Content License](https://pixabay.com/service/license-summary/) | Pasos de carrera en bucle mientras corren; más fuertes con más gente y más rápidos con más velocidad. Renombrado. |
 
 **Atribuciones (CC BY 4.0):**
 - "VEHSirn_Police Car Siren.Synthesized.Dry 1_EM.wav" de newlocknew (https://freesound.org/people/newlocknew/sounds/692524/), bajo licencia CC BY 4.0. Renombrado como `sirena.wav` para este proyecto.
-- "referee_whistle_01.wav" de joedeshon (https://freesound.org/people/joedeshon/sounds/78508/), bajo licencia CC BY 4.0.
+- "referee_whistle_01.wav" de joedeshon (https://freesound.org/people/joedeshon/sounds/78508/), bajo licencia CC BY 4.0. Renombrado como `silbato.wav` para este proyecto.
 
 Aunque son CC0, también agradecemos a InspectorJ y a Joseph SARDIN (BigSoundBank).
 
@@ -181,9 +193,11 @@ Tipografías: Big Shoulders Stencil Display y Space Mono, de Google Fonts (SIL O
 ## 3. Reflexión
 
 **Qué descubrimos al traducir el tacto en imagen y sonido.**
-La presión del dedo era el dato más expresivo y el menos confiable, muchos teléfonos no la miden, y el diámetro del contacto cambia según cada mano y cada pantalla. Por eso el agua pasó del dedo al **soplo**. El soplo resultó un gesto más justo para el concepto, es pequeño, casi invisible, y aun así borra la pantalla de todos. Pero cada micrófono escucha distinto, así que hubo que medir el soplo **en relación con el ruido de la sala** y no como un valor fijo.
+La presión del dedo era el dato más expresivo y el menos confiable, muchos teléfonos no la miden, y el diámetro del contacto cambia según cada mano y cada pantalla. Por eso el agua pasó del dedo al **soplo**. El soplo resultó un gesto más justo para el concepto, es pequeño, casi invisible, y aun así borra la pantalla de todos. Pero cada micrófono escucha distinto, y al principio cualquier ruido fuerte (una voz, un aplauso, la música) también soltaba agua. Para que respondiera solo al soplo, el teléfono revisa cuatro cosas a la vez: que sea fuerte comparado con el ruido de la sala, que suene como ruido parejo y no como una voz (que tiene tonos), que la energía esté en los graves (donde golpea el viento) y que dure más que un golpe. Además subimos el umbral: hay que soplar fuerte, y sostener el chorro cansa.
 
-También descubrimos que la asimetría no estaba en las reglas sino en los cuerpos, una persona sopla mientras tres se inclinan, saltan, se agachan y sostienen escudos. Primero probamos que los ciudadanos empujaran el agua con la **palma abierta**, pero los teléfonos descartan la mano entera como un toque accidental (rechazo de palma) y el gesto no respondía. Lo cambiamos por **3 dedos**, que el teléfono sí reconoce, y por un **escudo** visible, más cercano a la calle real. Agacharse pasó a ser **deslizar un dedo hacia abajo**: el dedo baja y el cuerpo baja. Con los escudos el juego cambió de sentido: uno solo no sirve; hay que ponerse de acuerdo. Y como la voz de la calle baja con cada persona que cae, perder a alguien se escucha antes de verse.
+Con el movimiento pasó algo parecido: al tirar el teléfono para saltar, también se inclinaba, y el personaje se cambiaba de calle. Aprendimos a separarlos: inclinar es **girar** el teléfono, tirar es **desplazarlo** hacia arriba sin girar. Mientras dura el tirón, la calle se queda quieta.
+
+También descubrimos que la asimetría no estaba en las reglas sino en los cuerpos, una persona sopla mientras las demás se inclinan, saltan, se agachan y sostienen escudos. Para el escudo elegimos **2 dedos**: el teléfono los reconoce bien, son cómodos de mantener mientras se sigue jugando con la misma mano, y el escudo es un objeto cercano a la calle real. Agacharse es **deslizar un dedo hacia abajo**: el dedo baja y el cuerpo baja. Con los escudos el juego cambió de sentido: uno solo no sirve; hay que ponerse de acuerdo. Y como la voz de la calle baja con cada persona que cae, perder a alguien se escucha antes de verse.
 
 Al probar con teléfonos reales apareció lo técnico como parte de la experiencia. El giroscopio era tan sensible que un movimiento brusco tiraba al personaje de un lado a otro, hubo que suavizarlo y limitar los cambios a una calle por vez. Y al mandar demasiados mensajes por MQTT, el broker los ponía en fila: el agua llegaba **después** de soplar y seguía saliendo sola. La causa y el efecto, que son el centro del tacto, dependían de cuántos mensajes enviábamos.
 
@@ -192,6 +206,7 @@ Al probar con teléfonos reales apareció lo técnico como parte de la experienc
 El olor del gas, el ardor en los ojos, el peso del agua en la ropa, el frío. Las personas que perdieron la vista, que ningún desenfoque puede representar. La multitud real, aquí son tres. El tiempo: semanas y años comprimidos en minutos. Y la distancia entre jugar y vivirlo, el agua del juego no moja.
 
 **Mejoras concretas.**
+
 1. **La voz como defensa:** que los ciudadanos también usen el micrófono, y que gritar o golpear una olla real suba el volumen de la calle y limpie por un momento el agua de la pantalla.
 2. **Calibración al entrar:** un paso de 5 segundos en el teléfono ("sopla fuerte", "inclina a cada lado") para ajustar el soplo y el giro a cada modelo, en vez de usar valores fijos.
 3. **Broker más cercano** (por ejemplo, en São Paulo) para bajar la latencia entre el gesto y la imagen.
