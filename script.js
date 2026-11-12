@@ -736,7 +736,9 @@ function actualizar(dt) {
     audio.nivel('motor', enCalle ? 0.3 + e.agua * 0.25 : 0.1, 0.85 + e.agua * 0.35);
     // la sirena solo suena en la carrera. En la historia y la sala las balizas del fondo se prenden y apagan solas,
     // y la sirena se escuchaba ~5 s y se cortaba: parecía que el sonido fallaba
-    audio.nivel('sirena', enCalle ? e.balizas * 0.38 : 0, 0.75 + e.fuerza * 0.7);
+    // durante la carrera la sirena suena SIEMPRE (el carro viene detrás); cuando el POC toca o sopla, las balizas
+    // la suben y la aceleran. Antes solo sonaba con las balizas encendidas y se cortaba cada vez que el POC soltaba.
+    audio.nivel('sirena', jugando ? 0.26 + e.balizas * 0.2 : 0, 0.85 + e.balizas * 0.15 + e.fuerza * 0.35);
     audio.nivel('chorro', e.agua * 0.95);
     if (audio.filtroChorro) audio.filtroChorro.frequency.setTargetAtTime(400 + e.agua * 8000, audio.ctx.currentTime, 0.05);
     audio.nivel('latido', jugando && nv === 1 && na > 1 ? 0.75 : 0);           // queda una sola persona: se oye su cuerpo
