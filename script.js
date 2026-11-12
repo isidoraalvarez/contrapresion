@@ -231,7 +231,7 @@ btnSaltar.addEventListener('pointerdown', e => { btnSaltar.setPointerCapture(e.p
 
 // ============================ 4. AUDIO ============================
 const SONIDOS = ['pasos', 'salto', 'carril', 'sirena', 'chorro', 'impacto_agua', 'motor', 'valla', 'cacerola', 'silbato', 'detenido', 'latido', 'fuego', 'dron', 'protesta'];
-const BUCLES = ['motor', 'sirena', 'chorro', 'latido', 'fuego', 'dron', 'protesta', 'pasos'];
+const BUCLES = ['motor', 'sirena', 'chorro', 'latido', 'fuego', 'dron', 'protesta', 'pasos', 'cacerolazo'];
 // sonidos de Freesound / BigSoundBank (ver README: autoría y licencia). Se dejan con su nombre original para el crédito.
 const ARCHIVO = {
   protesta: '485621__inspectorj__protesting-crowd-climate-strike-guildford-01-01.wav',   // la calle: multitud protestando
@@ -240,11 +240,13 @@ const ARCHIVO = {
   pasos: 'freesound_community-180904-woodland04-run-steps-skip-jump-clip-47486.mp3',   // carrera (bucle)
 };                                                           // el resto: sonidos/<nombre>.wav
 // los sonidos largos se cortan al usarlos como golpe (segundos): la cacerola trae varios golpes, se usa uno
-const DURACION = { cacerola: 0.75, silbato: 1.1 };
+const DURACION = { cacerola: 1.2, silbato: 1.1 };
 // ganancia por sonido: los archivos externos vienen grabados mucho más bajos que los sintetizados
 // (medido: multitud −24 dB, cacerola −24,5 dB, pasos −39 dB de volumen promedio, contra −12 dB del motor).
 // Se suben para que la calle, la sirena y el cacerolazo se escuchen claros.
-const GANANCIA = { protesta: 3.2, cacerola: 2.8, sirena: 2.2, pasos: 4, fuego: 1.8, valla: 1.5, motor: 0.7 };
+const GANANCIA = { protesta: 4.5, cacerola: 3.5, cacerolazo: 3, sirena: 2.2, pasos: 4, fuego: 1.8, valla: 1.5, motor: 0.7 };
+// bucles que reutilizan el archivo de otro sonido: el cacerolazo de fondo es el mismo archivo de la cacerola, en bucle
+const BUFFER_DE = { cacerolazo: 'cacerola' };
 const ganancia = n => GANANCIA[n] || 1;
 const rutaSonido = n => `sonidos/${encodeURIComponent(ARCHIVO[n] || n + '.wav')}`;
 const DEL_POC = new Set(['sirena', 'chorro', 'impacto_agua']); // suenan encima de todo; el resto ("el mundo") se apaga bajo el agua
@@ -263,8 +265,9 @@ const audio = {
     const ctx = (this.ctx = new C());
     // compresor + ganancia final: todo suena más fuerte sin saturar (el compresor aplana los picos y la ganancia sube el resto)
     const comp = ctx.createDynamicsCompressor();
-    comp.threshold.value = -20; comp.knee.value = 8; comp.ratio.value = 6; comp.attack.value = 0.005; comp.release.value = 0.2;
-    const fuerte = ctx.createGain(); fuerte.gain.value = 2.2; comp.connect(fuerte); fuerte.connect(ctx.destination);
+    // compresión suave: una compresión fuerte hacía que la sirena "aplastara" a la calle y al cacerolazo
+    comp.threshold.value = -16; comp.knee.value = 10; comp.ratio.value = 3.5; comp.attack.value = 0.01; comp.release.value = 0.25;
+    const fuerte = ctx.createGain(); fuerte.gain.value = 2.0; comp.connect(fuerte); fuerte.connect(ctx.destination);
     this.salida = ctx.createGain(); this.salida.gain.value = this.mudo ? 0 : 0.9 * this.volumen; this.salida.connect(comp);
     this.mundo = ctx.createBiquadFilter(); this.mundo.type = 'lowpass'; this.mundo.frequency.value = 18000; this.mundo.connect(this.salida);
     // cada bucle empieza APENAS se carga su archivo (antes se esperaba a que cargaran los 15, y los archivos grandes
@@ -273,6 +276,7 @@ const audio = {
       try {
         this.buf[n] = await ctx.decodeAudioData(await (await fetch(rutaSonido(n))).arrayBuffer());
         if (BUCLES.includes(n)) this.bucle(n);
+        for (const [bucle, de] of Object.entries(BUFFER_DE)) if (de === n) this.bucle(bucle);   // p. ej. el cacerolazo de fondo
         if (n === 'chorro' && this.bucles.chorro) { // el chorro se abre (más agudo, más áspero) con la fuerza del soplo
           const f = ctx.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = 800;
           this.bucles.chorro.src.disconnect(); this.bucles.chorro.src.connect(f); f.connect(this.bucles.chorro.g); this.filtroChorro = f;
@@ -285,12 +289,12 @@ const audio = {
   elementos() {
     this.modoElem = true;
     for (const n of SONIDOS) { const a = new Audio(rutaSonido(n)); a.preload = 'auto'; a.preservesPitch = false; this.el[n] = a; }
-    for (const n of BUCLES) { const a = this.el[n]; a.loop = true; a.volume = 0; a.play().catch(() => {}); this.bucles[n] = { elem: a }; }
+    for (const n of BUCLES) { const a = BUFFER_DE[n] ? new Audio(rutaSonido(BUFFER_DE[n])) : this.el[n]; a.loop = true; a.volume = 0; a.play().catch(() => {}); this.bucles[n] = { elem: a }; }
   },
   bucle(n) {
-    if (!this.buf[n]) return;
+    const buf = this.buf[BUFFER_DE[n] || n]; if (!buf || this.bucles[n]) return;
     const src = this.ctx.createBufferSource(), g = this.ctx.createGain();
-    src.buffer = this.buf[n]; src.loop = true; g.gain.value = 0; src.connect(g); g.connect(DEL_POC.has(n) ? this.salida : this.mundo); src.start();
+    src.buffer = buf; src.loop = true; g.gain.value = 0; src.connect(g); g.connect(DEL_POC.has(n) ? this.salida : this.mundo); src.start();
     this.bucles[n] = { src, g };
   },
   nivel(n, v, rate) {
@@ -319,7 +323,7 @@ const audio = {
     } else s.start();
   },
   // el agua ensordece: todo lo que no es del POC (pasos, multitud, fuego) se oye como bajo el agua
-  ensordecer(k) { this.sordera = k; if (this.mundo) this.mundo.frequency.setTargetAtTime(lerp(18000, 650, k), this.ctx.currentTime, 0.08); },
+  ensordecer(k) { this.sordera = k; if (this.mundo) this.mundo.frequency.setTargetAtTime(lerp(18000, 900, k), this.ctx.currentTime, 0.08); },
   silenciar() {
     this.mudo = !this.mudo;
     if (this.salida) this.salida.gain.value = this.mudo ? 0 : 0.9 * this.volumen;
@@ -732,13 +736,14 @@ function actualizar(dt) {
   // ---- audio continuo ----
   if (audio.ctx) {
     const enCalle = !espera, nv = vivos().length, na = Math.max(1, e.enJuego || 3);
-    audio.ensordecer(e.agua * 0.9);
+    audio.ensordecer(e.agua * 0.75);   // el agua apaga la calle, pero sin dejarla muda
     audio.nivel('motor', enCalle ? 0.3 + e.agua * 0.25 : 0.1, 0.85 + e.agua * 0.35);
     // la sirena solo suena en la carrera. En la historia y la sala las balizas del fondo se prenden y apagan solas,
     // y la sirena se escuchaba ~5 s y se cortaba: parecía que el sonido fallaba
     // durante la carrera la sirena suena SIEMPRE (el carro viene detrás); cuando el POC toca o sopla, las balizas
     // la suben y la aceleran. Antes solo sonaba con las balizas encendidas y se cortaba cada vez que el POC soltaba.
-    audio.nivel('sirena', jugando ? 0.26 + e.balizas * 0.2 : 0, 0.85 + e.balizas * 0.15 + e.fuerza * 0.35);
+    // (suave de base para no tapar la calle; fuerte con las balizas)
+    audio.nivel('sirena', jugando ? 0.13 + e.balizas * 0.3 : 0, 0.85 + e.balizas * 0.15 + e.fuerza * 0.35);
     audio.nivel('chorro', e.agua * 0.95);
     if (audio.filtroChorro) audio.filtroChorro.frequency.setTargetAtTime(400 + e.agua * 8000, audio.ctx.currentTime, 0.05);
     audio.nivel('latido', jugando && nv === 1 && na > 1 ? 0.75 : 0);           // queda una sola persona: se oye su cuerpo
@@ -750,6 +755,8 @@ function actualizar(dt) {
     const voz = jugando ? 0.4 + 0.6 * (nv / na) + e.contra * 0.3 : 1;
     // antes de la partida (inicio, historia y sala) la calle suena de fondo, más suave y sin cortes
     audio.nivel('protesta', enPartida ? clamp(CONFIG.volumenProtesta * voz) : CONFIG.volumenProtesta * 0.8);
+    // cacerolazo de fondo: siempre, más presente en la carrera; baja con cada persona fuera, como la voz de la calle
+    audio.nivel('cacerolazo', enPartida ? 0.3 * clamp(voz) : 0.22);
     audio.nivel('fuego', (enCalle && niv.ambiente === 'fuego') ? 0.35 : 0);
     audio.nivel('dron', e.fase === 'cine' ? 0.5 : (enCalle && niv.ambiente === 'dron') ? 0.55 : 0);
   }
