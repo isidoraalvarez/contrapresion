@@ -267,15 +267,19 @@ const audio = {
     const fuerte = ctx.createGain(); fuerte.gain.value = 2.2; comp.connect(fuerte); fuerte.connect(ctx.destination);
     this.salida = ctx.createGain(); this.salida.gain.value = this.mudo ? 0 : 0.9 * this.volumen; this.salida.connect(comp);
     this.mundo = ctx.createBiquadFilter(); this.mundo.type = 'lowpass'; this.mundo.frequency.value = 18000; this.mundo.connect(this.salida);
+    // cada bucle empieza APENAS se carga su archivo (antes se esperaba a que cargaran los 15, y los archivos grandes
+    // —la multitud y la sirena— dejaban la historia en silencio los primeros segundos)
     await Promise.all(SONIDOS.map(async n => {
-      try { this.buf[n] = await ctx.decodeAudioData(await (await fetch(rutaSonido(n))).arrayBuffer()); } catch (e) { console.warn('No se pudo cargar', rutaSonido(n), e && e.message); /* abierto como archivo: se usa el respaldo */ }
+      try {
+        this.buf[n] = await ctx.decodeAudioData(await (await fetch(rutaSonido(n))).arrayBuffer());
+        if (BUCLES.includes(n)) this.bucle(n);
+        if (n === 'chorro' && this.bucles.chorro) { // el chorro se abre (más agudo, más áspero) con la fuerza del soplo
+          const f = ctx.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = 800;
+          this.bucles.chorro.src.disconnect(); this.bucles.chorro.src.connect(f); f.connect(this.bucles.chorro.g); this.filtroChorro = f;
+        }
+      } catch (e) { console.warn('No se pudo cargar', rutaSonido(n), e && e.message); /* abierto como archivo: se usa el respaldo */ }
     }));
     if (!Object.keys(this.buf).length) { this.elementos(); return; }
-    for (const n of BUCLES) this.bucle(n);
-    if (this.bucles.chorro) { // el chorro se abre (más agudo, más áspero) con la fuerza del dedo
-      const f = ctx.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = 800;
-      this.bucles.chorro.src.disconnect(); this.bucles.chorro.src.connect(f); f.connect(this.bucles.chorro.g); this.filtroChorro = f;
-    }
   },
   // abierto con doble clic (file://) el navegador no deja leer los .wav con fetch: se usan etiquetas <audio>
   elementos() {
@@ -743,7 +747,7 @@ function actualizar(dt) {
     const enPartida = e.fase === 'placa' || e.fase === 'juego' || (e.fase === 'resultado' && !e.pausa);
     const voz = jugando ? 0.4 + 0.6 * (nv / na) + e.contra * 0.3 : 1;
     // antes de la partida (inicio, historia y sala) la calle suena de fondo, más suave y sin cortes
-    audio.nivel('protesta', enPartida ? clamp(CONFIG.volumenProtesta * voz) : CONFIG.volumenProtesta * 0.55);
+    audio.nivel('protesta', enPartida ? clamp(CONFIG.volumenProtesta * voz) : CONFIG.volumenProtesta * 0.8);
     audio.nivel('fuego', (enCalle && niv.ambiente === 'fuego') ? 0.35 : 0);
     audio.nivel('dron', e.fase === 'cine' ? 0.5 : (enCalle && niv.ambiente === 'dron') ? 0.55 : 0);
   }
