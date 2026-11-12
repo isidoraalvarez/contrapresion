@@ -225,5 +225,5 @@ El sistema no reconoce intenciones humanas, gestos ni resistencia física real, 
 
 - Concepto, diseño, código del juego, control y sonidos sintetizados: [isidoraalvarez](https://github.com/isidoraalvarez) y [dayanapanitrur](https://github.com/dayanapanitrur).
 - Base técnica: [Tacto](https://github.com/fefeliperoar/tacto), de fefeliperoar (`tacto.js`, `server.js`, `vendor/mqtt.min.js`).
-- Sonidos externos: [Ver tabla de sonidos]([####-sonidos-externos-autoría-y-licencia](#sonidos-externos-autor%C3%ADa-y-licencia)).
+- Sonidos externos: [Ver tabla de sonidos](#sonidos-externos-autoría-y-licencia).
 - El POC es una institución ficticia. Los textos de carteles, muros y cinemática se configuran en `CONFIG` (`script.js`).
