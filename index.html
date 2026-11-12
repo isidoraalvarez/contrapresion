@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#07080d">
+<meta name="description" content="Contrapresión: personas corren por la Alameda; otra, desde un carro lanzaaguas, sopla. Juego para 2 a 4 teléfonos conectados por MQTT.">
+<title>Contrapresión</title>
+<link rel="icon" href="icon.svg">
+<!-- el "?v=" obliga al navegador a bajar la versión nueva (si no, puede usar una copia guardada vieja).
+     Al cambiar el juego, súbele el número aquí y en control.html -->
+<link rel="stylesheet" href="style.css?v=10">
+</head>
+<body class="pantalla grano">
+  <canvas id="escena" aria-label="Calle de Santiago: tres personas corren hacia el horizonte perseguidas por un carro lanzaaguas"></canvas>
+
+  <!-- HUD durante el juego -->
+  <div id="hud" hidden aria-hidden="true">
+    <div class="arriba">
+      <div class="nivel"><span id="hudNum">Nivel 1 de 3</span><b id="hudNivel">El Estallido</b><span id="hudFecha">Octubre 2019</span></div>
+      <div class="avance">
+        <div class="metros" id="hudMetros">0<small> / 500 m</small></div>
+        <div class="ruta"><i id="hudRuta"></i><span id="hudDesde">Alameda</span><span id="hudHasta">Plaza Dignidad</span></div>
+      </div>
+      <div class="estanque" id="hudEstanque"><div class="etiqueta" id="hudEstanqueTxt">POC · estanque</div><div class="barra"><i id="hudAgua"></i></div></div>
+    </div>
+    <div></div>
+    <div class="abajo">
+      <div class="gente" id="fichas"></div>
+      <div class="ayuda"><b>M</b> silencio · <b>− +</b> volumen</div>
+    </div>
+  </div>
+  <div id="sellos" aria-live="assertive"></div>
+
+  <!-- volumen de la pantalla: se ajusta en el computador, siempre visible -->
+  <div id="volumen" role="group" aria-label="Volumen">
+    <button id="volBoton" type="button" aria-pressed="false" aria-label="Silenciar">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path class="parlante" d="M4 9h4l5-4v14l-5-4H4z"/><path class="ondas" d="M16 8.5a5 5 0 0 1 0 7M18.5 6a8.5 8.5 0 0 1 0 12"/><path class="tachado" d="M16 9l6 6M22 9l-6 6"/></svg>
+    </button>
+    <input id="volRango" type="range" min="0" max="100" step="5" value="80" aria-label="Volumen del juego">
+    <span id="volValor">80 %</span>
+  </div>
+
+  <!-- 0 · inicio: el primer clic también habilita el sonido -->
+  <section id="inicio" class="capa" aria-labelledby="tInicio">
+    <div class="bloque">
+      <h1 id="tInicio" class="marca"><span class="contra">Contra</span><br><span class="presion">presión</span></h1>
+      <div class="cinta" aria-hidden="true" style="width:100%"></div>
+      <p>Personas corren por la Alameda. Otra, desde un carro lanzaaguas, sopla. De 2 a 4 teléfonos, una pantalla. Sube el volumen.</p>
+      <button class="boton" id="btnInicio">Comenzar</button>
+      <small class="version">versión 11-11 sonidos10</small>
+    </div>
+  </section>
+
+  <!-- 1 · cinemática -->
+  <section id="cine" class="capa" hidden aria-live="polite">
+    <div class="placa" id="cinePlaca"></div>
+  </section>
+  <button id="saltar" hidden aria-label="Mantén apretado 3 segundos para saltar la cinemática">
+    <svg viewBox="0 0 34 34" aria-hidden="true"><circle class="fondo" cx="17" cy="17" r="14"/><circle class="avance" id="saltarAvance" cx="17" cy="17" r="14"/></svg>
+    <span>Mantén <b>espacio</b> 3 s<br>para saltar</span>
+  </button>
+
+  <!-- 2 · sala: cuatro puestos -->
+  <section id="sala" class="capa" hidden aria-labelledby="tSala">
+    <div class="hoja">
+      <div class="cabeza">
+        <h2 id="tSala" class="marca"><span class="contra">Contra</span><span class="presion">presión</span></h2>
+      </div>
+      <div class="cinta" aria-hidden="true"></div>
+      <div class="entrada">
+        <div class="qr" id="qrUnico">sin código</div>
+        <div class="entrada-txt">
+          <b>Escanea con tu teléfono</b>
+          <span>Escribe un apodo y espera tu puesto: Ciudadano 1, 2, 3 o el POC.</span>
+          <button class="boton sec" id="btnSortear" type="button">Sortear de nuevo</button>
+        </div>
+      </div>
+      <div class="puestos" id="puestos"></div>
+      <div class="pie">
+        <button class="boton" id="btnSalir" disabled>Salir a la calle</button>
+        <div class="sala-id">sala <b id="salaId">——</b> <button class="boton sec" id="btnNuevaSala">nueva sala</button> <span id="conexion">conectando…</span></div>
+        <div class="faltan" id="faltan" role="status">Se necesitan al menos dos jugadores</div>
+        <div class="aviso" id="avisoQR"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 3 · placas de nivel y de resultado -->
+  <section id="placa" class="capa" hidden aria-live="polite"><div class="caja" id="placaCaja"></div></section>
+
+<script src="config.js?v=10"></script>
+<script src="tacto.js?v=10"></script>
+<script src="script.js?v=10"></script>
+</body>
+</html>
