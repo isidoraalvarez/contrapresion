@@ -114,7 +114,7 @@ El tono es tragicómico por el contexto actual: los textos son directos y a vece
 
 Mientras más escudos estén arriba al mismo tiempo, menos agua llega a la pantalla. Un escudo solo ayuda poco, cuando todos los ciudadanos levantan el suyo, el chorro casi desaparece. El agua sale **solo soplando**: ningún otro gesto la activa, y si el teléfono del POC no tiene el micrófono activado, no sale agua.
 
-[Video funcionando](https://www.youtube.com/shorts/ao0koHEX0Ic)
+[Video sistema funcionando](https://www.youtube.com/shorts/ao0koHEX0Ic)
 
 ### Cómo se conecta el teléfono por MQTT
 
