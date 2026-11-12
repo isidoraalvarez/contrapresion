@@ -7,7 +7,9 @@
 <meta name="description" content="Contrapresión: personas corren por la Alameda; otra, desde un carro lanzaaguas, sopla. Juego para 2 a 4 teléfonos conectados por MQTT.">
 <title>Contrapresión</title>
 <link rel="icon" href="icon.svg">
-<link rel="stylesheet" href="style.css">
+<!-- el "?v=" obliga al navegador a bajar la versión nueva (si no, puede usar una copia guardada vieja).
+     Al cambiar el juego, súbele el número aquí y en control.html -->
+<link rel="stylesheet" href="style.css?v=8">
 </head>
 <body class="pantalla grano">
   <canvas id="escena" aria-label="Calle de Santiago: tres personas corren hacia el horizonte perseguidas por un carro lanzaaguas"></canvas>
@@ -46,7 +48,7 @@
       <div class="cinta" aria-hidden="true" style="width:100%"></div>
       <p>Personas corren por la Alameda. Otra, desde un carro lanzaaguas, sopla. De 2 a 4 teléfonos, una pantalla. Sube el volumen.</p>
       <button class="boton" id="btnInicio">Comenzar</button>
-      <small class="version">versión 11-11 sonidos6</small>
+      <small class="version">versión 11-11 sonidos8</small>
     </div>
   </section>
 
@@ -87,8 +89,8 @@
   <!-- 3 · placas de nivel y de resultado -->
   <section id="placa" class="capa" hidden aria-live="polite"><div class="caja" id="placaCaja"></div></section>
 
-<script src="config.js"></script>
-<script src="tacto.js"></script>
-<script src="script.js"></script>
+<script src="config.js?v=8"></script>
+<script src="tacto.js?v=8"></script>
+<script src="script.js?v=8"></script>
 </body>
 </html>
