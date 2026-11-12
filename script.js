@@ -244,7 +244,8 @@ const GANANCIA = { protesta: 4.5, cacerola: 3.5, cacerolazo: 3, sirena: 2.2, pas
 // bucles que reutilizan el archivo de otro sonido: el cacerolazo de fondo es el mismo archivo de la cacerola, en bucle
 const BUFFER_DE = { cacerolazo: 'cacerola' };
 const ganancia = n => GANANCIA[n] || 1;
-const rutaSonido = n => `sonidos/${encodeURIComponent(ARCHIVO[n] || n + '.wav')}`;
+const VERSION_SONIDOS = 8;   // igual que el ?v= de index.html: evita que el navegador use sonidos viejos guardados
+const rutaSonido = n => `sonidos/${encodeURIComponent(ARCHIVO[n] || n + '.wav')}?v=${VERSION_SONIDOS}`;
 const DEL_POC = new Set(['sirena', 'chorro', 'impacto_agua']); // suenan encima de todo; el resto ("el mundo") se apaga bajo el agua
 const audio = {
   ctx: null, buf: {}, bucles: {}, mudo: false, modoElem: false, el: {}, sordera: 0,
@@ -757,9 +758,10 @@ function actualizar(dt) {
     const enPartida = e.fase === 'placa' || e.fase === 'juego' || (e.fase === 'resultado' && !e.pausa);
     const voz = jugando ? 0.4 + 0.6 * (nv / na) + e.contra * 0.3 : 1;
     // antes de la partida (inicio, historia y sala) la calle suena de fondo, más suave y sin cortes
-    audio.nivel('protesta', enPartida ? clamp(CONFIG.volumenProtesta * voz) : CONFIG.volumenProtesta * 0.8);
+    // protesta y cacerolazo: SOLO durante la carrera (no en la historia, ni en la sala, ni en las pantallas de nivel)
+    audio.nivel('protesta', jugando ? clamp(CONFIG.volumenProtesta * voz) : 0);
     // cacerolazo de fondo: siempre, más presente en la carrera; baja con cada persona fuera, como la voz de la calle
-    audio.nivel('cacerolazo', enPartida ? 0.5 * clamp(voz) : 0.3);   // junto a la protesta durante toda la carrera
+    audio.nivel('cacerolazo', jugando ? 0.5 * clamp(voz) : 0);   // junto a la protesta durante toda la carrera
     audio.nivel('fuego', (enCalle && niv.ambiente === 'fuego') ? 0.35 : 0);
     audio.nivel('dron', e.fase === 'cine' ? 0.5 : (enCalle && niv.ambiente === 'dron') ? 0.55 : 0);
   }
