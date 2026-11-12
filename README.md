@@ -30,17 +30,18 @@ Hoy sube la bencina, se recortan beneficios sociales, recortes en la salud y los
 
 ### Qué queremos que la persona sienta o descubra
 
-- **La presión de uno se resiste en conjunto.** Cuando los tres escudos están arriba a la vez, la imagen se aclara, la multitud vuelve a oírse fuerte y suena una cacerola. Sostener el escudo ocupa la mano mientras hay que seguir inclinando, saltando y agachándose, resistir juntos es una decisión.
-- **La voz es colectiva.** El sonido de la calle de una multitud protestand, suena mientras haya gente corriendo y baja cada vez que alguien queda fuera. Cuando queda una sola persona, ya no se oye la multitud sino su latido, y el borde de la pantalla late en su color.
-- **Basta con que una llegue, pero no es lo mismo.** El grupo pasa de nivel si al menos una persona llega a la meta, pero gana **una estrella por cada persona que llega** (con tres ciudadanos, hasta 3 por nivel y 9 en total). El puntaje premia llegar juntos. Si juegan solo dos personas (el POC y un ciudadano), llegar a la meta vale siempre las **3 estrellas**.
+- **Que relacione el gesto físico de colocar dos dedos en símbolo de crear un escudo.** Esto activa los escudos. Cuando los tres escudos están arriba a la vez, la imagen se aclara, la multitud vuelve a oírse fuerte y suena una cacerola. Sostener el escudo ocupa la mano mientras hay que seguir inclinando, saltando y agachándose, y realizando las funciones.
+- **El sonido de la calle se pierde cuando se pierde un jugador.** El sonido de la calle de una multitud protestand, suena mientras haya gente corriendo y baja cada vez que alguien queda fuera. Cuando queda una sola persona, ya no se oye la multitud sino su latido y el borde de la pantalla late en su color.
+- **El puntaje se gana en conjunto.** El grupo pasa de nivel si al menos una persona llega a la meta, pero gana **una estrella por cada persona que llega** (con tres ciudadanos, hasta 3 por nivel y 9 en total). El puntaje premia llegar juntos. Si juegan solo dos personas (el POC y un ciudadano), llegar a la meta vale siempre las **3 estrellas**.
 - **La luz que ciega es la única que muestra.** En el toque de queda la niebla tapa la calle, los obstáculos solo aparecen con los destellos de las balizas del carro.
-- **Nadie elige su lado.** Los puestos se sortean al entrar, cualquiera puede terminar soplando el agua o levantando un escudo.
+- **Que no puede elegir ser POC o ciudadano.** Los puestos se sortean al entrar.
+- **El esfuerzo físico de soplar al micrófono.** Controlar el chorro de agua requiere que el jugador del POC sople constantemente al teléfono. Mantener la presión del agua exige aire y cansa físicamente; ensuciar la pantalla del resto requiere un esfuerzo y desgaste real.
 
 ### Cómo se juega
 
 > **Inicio y cinemática.** Unas placas cuentan el contexto: el alza de 30 pesos del Metro, las evasiones, la marcha del 25 de octubre, Plaza Italia que pasa a llamarse Plaza Dignidad. Después viene el giro: el país que pidió dignidad votó por el orden, sube la bencina, se recortan beneficios… y tres personas corren por la Alameda por haber mandado un meme burlándose del gobierno. Se puede saltar, pero hay que mantener apretado 3 segundos: saltarse la historia cuesta un esfuerzo.
 
-> **Sala.** Todos escanean **un solo QR** y escriben un **apodo**. La pantalla sortea los puestos: Ciudadano 1, 2, 3 o POC. Se necesitan **al menos 2 teléfonos**: siempre hay un POC y de 1 a 3 ciudadanos; con dos teléfonos, uno es sí o sí el POC y el otro un ciudadano. **No se puede jugar de a uno**: el botón para salir a la calle queda bloqueado hasta que entren dos teléfonos. Los puestos sin teléfono no corren.
+> **Sala.** Todos escanean **un solo QR** y escriben su **apodo**. La pantalla sortea los puestos: Ciudadano 1, 2, 3 o POC. Se necesitan **al menos 2 teléfonos**: siempre hay un POC y de 1 a 3 ciudadanos; con dos teléfonos, uno es sí o sí el POC y el otro un ciudadano. **No se puede jugar de a uno**: el botón para salir a la calle queda bloqueado hasta que entren dos teléfonos. Los puestos sin teléfono no corren.
 
 > **Carrera.** Avance automático por tres niveles. Cada ciudadano tiene vida propia. si choca con un obstáculo aparece "¡Alcanzado!" y sale de la ronda, pero los demás siguen.
 
@@ -74,9 +75,9 @@ Hoy sube la bencina, se recortan beneficios sociales, recortes en la salud y los
 
 La estética sale de la calle misma: rayados con esténcil, afiches fotocopiados, cinta amarilla de valla, luces de baliza. No quisimos una imagen realista ni violenta, sino una ciudad dibujada con formas simples y planas, como un afiche o un cartel de protesta, para que se lea rápido en una pantalla compartida y para que el tema, que es delicado, no se vuelva morboso.
 
-La estética también cuenta la ironía de la historia. En el nivel 1 la calle está llena de color, gente, banderas y frases pintadas; en el nivel 3 todo eso desaparece: muros grises y limpios, vallas ordenadas y carteles azules que repiten "ORDEN" y "TODO VA A ESTAR BIEN". El color se va retirando a medida que avanza el juego, igual que la revuelta fue quedando atrás. El agua hace lo mismo sobre la pantalla: desenfoca, apaga el color y ensordece, es decir, borra lo que la gente estaba diciendo.
+La estética también cuenta la ironía de la historia. En el nivel 1 la calle está llena de color, gente, banderas y frases pintadas; en el nivel 3 todo eso desaparece: muros grises y limpios, vallas ordenadas y carteles azules que escriben "ORDEN" o una frase que ya hemos escuchado "TODO VA A ESTAR BIEN". El color se va retirando a medida que avanza el juego, igual que la revuelta fue quedando atrás. El agua hace lo mismo sobre la pantalla: desenfoca, apaga el color y ensordece, es decir, borra lo que la gente estaba diciendo.
 
-El tono es tragicómico: los textos son directos y a veces irónicos, pero nunca crudos ("¡Alcanzado!", "Esta vez no llegaron"), y al POC que gana el juego le pregunta si disfruta ejercer su poder.
+El tono es tragicómico por el contexto actual: los textos son directos y a veces irónicos, pero nunca crudo y al POC que gana el juego le pregunta si disfruta ejercer su poder.
 
 ### Gráfica
 
@@ -197,6 +198,7 @@ Tipografías: Big Shoulders Stencil Display y Space Mono, de Google Fonts (SIL O
 ## 3. Reflexión
 
 **Qué descubrimos al traducir el tacto en imagen y sonido.**
+
 La presión del dedo era el dato más expresivo y el menos confiable, muchos teléfonos no la miden, y el diámetro del contacto cambia según cada mano y cada pantalla. Por eso el agua pasó del dedo al **soplo**. El soplo resultó un gesto más justo para el concepto, es pequeño, casi invisible, y aun así borra la pantalla de todos. Pero cada micrófono escucha distinto, y al principio cualquier ruido fuerte (una voz, un aplauso, la música) también soltaba agua. Para que respondiera solo al soplo, el teléfono revisa cuatro cosas a la vez: que sea fuerte comparado con el ruido de la sala, que suene como ruido parejo y no como una voz (que tiene tonos), que la energía esté en los graves (donde golpea el viento) y que dure más que un golpe. Además subimos el umbral: hay que soplar fuerte, y sostener el chorro cansa.
 
 Con el movimiento pasó algo parecido: al tirar el teléfono para saltar, también se inclinaba, y el personaje se cambiaba de calle. Aprendimos a separarlos: inclinar es **girar** el teléfono, tirar es **desplazarlo** hacia arriba sin girar. Mientras dura el tirón, la calle se queda quieta.
@@ -207,7 +209,8 @@ Al probar con teléfonos reales apareció lo técnico como parte de la experienc
 
 
 **Qué queda fuera del sistema.**
-El olor del gas, el ardor en los ojos, el peso del agua en la ropa, el frío. Las personas que perdieron la vista, que ningún desenfoque puede representar. La multitud real, aquí son tres. El tiempo: semanas y años comprimidos en minutos. Y la distancia entre jugar y vivirlo, el agua del juego no moja.
+
+El sistema no reconoce intenciones humanas, gestos ni resistencia física real, es decir, no sabe si el jugador al soplar se está cansando por ejemplo. Y de hecho tampoco reconoce como tal el gesto de soplar, este entiende que el teléfono solo lee picos de energía en frecuencias graves. O por ejemplo, la pantalla no reconoce los dedos en forma de "escudos", solo evalúa la cantidad en la variable touch.n. 
 
 **Mejoras concretas.**
 
