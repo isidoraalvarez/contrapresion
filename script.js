@@ -244,7 +244,7 @@ const GANANCIA = { protesta: 4.5, cacerola: 3.5, cacerolazo: 3, sirena: 2.2, pas
 // bucles que reutilizan el archivo de otro sonido: el cacerolazo de fondo es el mismo archivo de la cacerola, en bucle
 const BUFFER_DE = { cacerolazo: 'cacerola' };
 const ganancia = n => GANANCIA[n] || 1;
-const VERSION_SONIDOS = 8;   // igual que el ?v= de index.html: evita que el navegador use sonidos viejos guardados
+const VERSION_SONIDOS = 9;   // igual que el ?v= de index.html: evita que el navegador use sonidos viejos guardados
 const rutaSonido = n => `sonidos/${encodeURIComponent(ARCHIVO[n] || n + '.wav')}?v=${VERSION_SONIDOS}`;
 const DEL_POC = new Set(['sirena', 'chorro', 'impacto_agua']); // suenan encima de todo; el resto ("el mundo") se apaga bajo el agua
 const audio = {
@@ -391,7 +391,7 @@ function siguientePlaca() {
   $('#cinePlaca').innerHTML = p.titulo
     ? `<p class="fecha">Plaza Dignidad · Alameda · La Moneda</p><h2 class="marca" style="font-size:clamp(70px,14vw,190px)"><span class="contra">Contra</span><br><span class="presion">presión</span></h2>`
     : `<p class="fecha">${esc(p.fecha)}</p><p class="texto">${esc(p.texto)}</p>${p.nota ? `<p class="nota">${esc(p.nota)}</p>` : ''}`;
-  if (estado.cineI > 0) audio.tocar('cacerola', 0.45, rnd(0.92, 1.05));
+  // (sin cacerola en la historia: el cacerolazo suena solo durante la carrera)
 }
 function terminarCine() { saltarCine = 0; irA('sala'); pintarPuestos(); pintarQR(); }
 
