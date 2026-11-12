@@ -24,8 +24,9 @@ Hoy sube la bencina, se recortan beneficios sociales, recortes en la salud y los
 
 ### Relación entre tocar, ver y oír
 
-- **POC** Debe soplar sobre el micrófono, entre más fuerte es el soplido mayor es la fuerza del agua. De esta forma el agua cae sobre **la pantalla compartida**, desenfocándola y obstaculizando, aparece sirenas tipicas de color rojo y azul y de un ruido que ensordece todo lo demás. Un gesto mínimo, casi invisible, le quita la vista y la voz a un grupo entero.
-- **Los ciudadanos levantan escudos.** Apoyar **2 dedos** sobre el teléfono levanta un escudo, como los escudos de cartón y lata que la primera línea pintaba en la calle. Cada escudo bloquea una parte del agua, pero **uno solo no alcanza, solo los tres juntos detienen el chorro.** Esa es la contrapresión.
+- **El POC** debe soplar sobre el micrófono, entre más fuerte es el soplido mayor es la fuerza del agua. De esta forma el agua cae sobre **la pantalla compartida**, desenfocándola y obstaculizando la visión, las sirenas emiten un ruido que ensordece casi todo lo demás.
+
+- **Los ciudadanos** deben apoyar **2 dedos** sobre el teléfono, esto levanta un escudo, como los escudos de cartón y lata que la primera línea pintaba en la calle. Cada escudo bloquea una parte del agua, pero solo los tres juntos detienen el chorro. Esa es la contrapresión.
 
 **un soplo borra la vista y la voz de un grupo; solo los escudos juntos lo detienen.**
 
