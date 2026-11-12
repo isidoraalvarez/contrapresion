@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no,maximum-scale=1">
+<meta name="theme-color" content="#07080d">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>Contrapresión · control</title>
+<link rel="icon" href="icon.svg">
+<link rel="stylesheet" href="style.css?v=10">
+</head>
+<body class="tel grano">
+  <section id="entrar" aria-labelledby="t">
+    <h1 id="t" class="marca"><span class="contra">Contra</span><br><span class="presion">presión</span></h1>
+    <div class="cinta" aria-hidden="true"></div>
+    <p>Este teléfono es tu personaje. No eliges cuál: al entrar, la pantalla te sortea un puesto. Puedes ser uno de los tres ciudadanos que corren o el POC, que conduce el carro lanzaaguas.</p>
+    <label id="campoNombre">Tu apodo<input id="nombre" maxlength="14" autocomplete="off" autocapitalize="words" spellcheck="false" placeholder="no uses tu nombre real"></label>
+    <p class="nota">Se verá en la pantalla compartida. Usa un apodo, no tu nombre real (máximo 14 letras).</p>
+    <p class="nota">Al entrar, el teléfono pide permiso para el <b>micrófono</b> y el <b>movimiento</b>: acepta los dos. El micrófono solo se usa si te toca ser POC (soplar suelta el agua); no se graba ni se envía sonido, solo cuánto soplas.</p>
+    <label>Sala (la muestra la pantalla)<input id="sala" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" maxlength="24" placeholder="ej: k7m2xq"></label>
+    <button id="ir">Entrar</button>
+    <div class="error" id="err" role="alert"></div>
+  </section>
+
+  <section id="jugar" hidden>
+    <div id="barra"><span id="estado" role="status" aria-live="polite">Conectando…</span><span id="info"></span></div>
+    <div id="sup">
+      <canvas id="cv" aria-hidden="true"></canvas>
+      <div id="titulo"><p class="marca" id="rolNombre"></p><div class="etiqueta" id="rolDato"></div></div>
+      <div id="detenido" hidden><div><b>Fuera de esta ronda</b><p>Te alcanzó el agua. Mira la pantalla y acompaña a tu grupo: vuelves a correr en el siguiente nivel.</p></div></div>
+      <!-- fin del nivel: a cada teléfono le llega si su lado ganó o perdió -->
+      <div id="resultadoTel" hidden><div><b id="resTitulo"></b><p id="resTexto"></p></div></div>
+    </div>
+    <button id="btnMic" hidden>Activar micrófono · soplar es el agua</button>
+    <div id="guia"></div>
+    <div id="aviso" role="alert"></div>
+  </section>
+
+<script src="config.js?v=10"></script>
+<script src="tacto.js?v=10"></script>
+<script src="control.js?v=12"></script>
+</body>
+</html>
