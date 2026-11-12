@@ -730,7 +730,9 @@ function actualizar(dt) {
     const enCalle = !espera, nv = vivos().length, na = Math.max(1, e.enJuego || 3);
     audio.ensordecer(e.agua * 0.9);
     audio.nivel('motor', enCalle ? 0.3 + e.agua * 0.25 : 0.1, 0.85 + e.agua * 0.35);
-    audio.nivel('sirena', e.balizas * (enCalle ? 0.38 : 0.12), 0.75 + e.fuerza * 0.7);
+    // la sirena solo suena en la carrera. En la historia y la sala las balizas del fondo se prenden y apagan solas,
+    // y la sirena se escuchaba ~5 s y se cortaba: parecía que el sonido fallaba
+    audio.nivel('sirena', enCalle ? e.balizas * 0.38 : 0, 0.75 + e.fuerza * 0.7);
     audio.nivel('chorro', e.agua * 0.95);
     if (audio.filtroChorro) audio.filtroChorro.frequency.setTargetAtTime(400 + e.agua * 8000, audio.ctx.currentTime, 0.05);
     audio.nivel('latido', jugando && nv === 1 && na > 1 ? 0.75 : 0);           // queda una sola persona: se oye su cuerpo
@@ -740,7 +742,8 @@ function actualizar(dt) {
     // y sube cuando los escudos bloquean el agua. El agua la apaga (filtro del mundo).
     const enPartida = e.fase === 'placa' || e.fase === 'juego' || (e.fase === 'resultado' && !e.pausa);
     const voz = jugando ? 0.4 + 0.6 * (nv / na) + e.contra * 0.3 : 1;
-    audio.nivel('protesta', enPartida ? clamp(CONFIG.volumenProtesta * voz) : 0);
+    // antes de la partida (inicio, historia y sala) la calle suena de fondo, más suave y sin cortes
+    audio.nivel('protesta', enPartida ? clamp(CONFIG.volumenProtesta * voz) : CONFIG.volumenProtesta * 0.55);
     audio.nivel('fuego', (enCalle && niv.ambiente === 'fuego') ? 0.35 : 0);
     audio.nivel('dron', e.fase === 'cine' ? 0.5 : (enCalle && niv.ambiente === 'dron') ? 0.55 : 0);
   }
