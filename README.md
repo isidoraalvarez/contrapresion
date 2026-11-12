@@ -22,14 +22,14 @@ Hoy sube la bencina, se recortan beneficios sociales, recortes en la salud y los
 
 *Contrapresión* transforma esta premisa en un juego, el cuál es una carrera colectiva de resistencia: **de uno a tres ciudadanos** avanzan juntos por la Alameda mientras **otro jugador** maneja un carro lanzaaguas del **POC** (Policía del Orden de Chile, una institución **ficticia** por obvias razones legales). La ciudad cambia en tres niveles: del estallido de 2019 al toque de queda de la pandemia, y de ahí a una Alameda limpia, llena de vallas y carteles que dicen "ORDEN" y "TODO VA A ESTAR BIEN".
 
-### La relación entre tocar, ver y oír
+### Relación entre tocar, ver y oír
 
 - **El POC sopla.** Su aliento sobre el micrófono es la fuerza del agua. El agua no apunta a una persona, cae sobre **la pantalla compartida**, la desenfoca, la hace ondular, la llena de gotas, aparece sirenas tipicas de color rojo y azul y de un ruido que ensordece todo lo demás. Un gesto mínimo, casi invisible, le quita la vista y la voz a un grupo entero.
 - **Los ciudadanos levantan escudos.** Apoyar **2 dedos** sobre el teléfono levanta un escudo, como los escudos de cartón y lata que la primera línea pintaba en la calle. Cada escudo bloquea una parte del agua, pero **uno solo no alcanza, solo los tres juntos detienen el chorro.** Esa es la contrapresión.
 
 **un soplo borra la vista y la voz de un grupo; solo los escudos juntos lo detienen.**
 
-### Lo que queremos que la persona sienta o descubra
+### Qué queremos que la persona sienta o descubra
 
 - **La presión de uno se resiste en conjunto.** Cuando los tres escudos están arriba a la vez, la imagen se aclara, la multitud vuelve a oírse fuerte y suena una cacerola. Sostener el escudo ocupa la mano mientras hay que seguir inclinando, saltando y agachándose, resistir juntos es una decisión.
 - **La voz es colectiva.** El sonido de la calle de una multitud protestand, suena mientras haya gente corriendo y baja cada vez que alguien queda fuera. Cuando queda una sola persona, ya no se oye la multitud sino su latido, y el borde de la pantalla late en su color.
